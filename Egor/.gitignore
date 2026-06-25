@@ -1,0 +1,17 @@
+# Зависимости — ставятся через `npm install`, в репозиторий не нужны
+node_modules/
+
+# Логи и временные файлы
+*.log
+npm-debug.log*
+
+# Системный мусор (.DS_Store — macOS, Thumbs.db — Windows)
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Переменные окружения (на будущее — туда кладут секреты)
+.env
