@@ -7,244 +7,115 @@
     <link href="admin.css" rel="stylesheet">
 </head>
 <body>
+    <div class="layout">
 
-    <header class="admin-header">
-        <h1 class="admin-title">Админ-панель TravelLine Tech</h1>
-        <p class="status" id="status"></p>
-    </header>
-
-    <section class="hero-section" id="hero">
-        <h2 class="section-title">1. О компании — ключевые показатели</h2>
-
-        <div class="hero-field">
-            <label class="field-label">Заголовок</label>
-            <input type="text" class="field-input hero__title" id="hero-title" value="Разрабатываем IT-решения для путешествий">
-        </div>
-
-        <h3 class="subsection-title">Ключевые показатели</h3>
-        <div class="stats-list advantages__list" id="hero-stats">
-            <div class="stats-row advantages__item">
-                <input type="text" class="field-input stats-value advantages__item-title" value="300+">
-                <input type="text" class="field-input stats-label" value="сотрудников">
-                <button class="btn danger">Удалить</button>
-            </div>
-            <div class="stats-row advantages__item">
-                <input type="text" class="field-input stats-value advantages__item-title" value="10+">
-                <input type="text" class="field-input stats-label" value="лет на рынке">
-                <button class="btn danger">Удалить</button>
-            </div>
-        </div>
-
-        <div class="section-actions">
-            <button class="btn add" id="hero-add-stat">+ Добавить показатель</button>
-            <button class="btn primary" id="hero-save">Сохранить раздел</button>
-        </div>
-    </section>
-
-    <section class="team-section" id="team">
-        <h2 class="section-title">2. Команда</h2>
-
-        <div class="cards-grid team__list" id="team-list">
-            <div class="card card--rounded team__item team__item-card" data-id="1">
-                <h3 class="card-title">Сотрудник #1</h3>
-
-                <label class="field-label">Имя</label>
-                <input type="text" class="field-input team__item-title" value="Алексей Герасимов">
-
-                <label class="field-label">Должность</label>
-                <input type="text" class="field-input team__item-description" value="СТО">
-
-                <label class="field-label">Фото (путь)</label>
-                <input type="text" class="field-input team__item-image card__image" value="upload/example.png">
-
-                <div class="team__item-socials">
-                    <label class="field-label">VK</label>
-                    <input type="text" class="field-input" data-social="vk" value="#">
-
-                    <label class="field-label">Telegram</label>
-                    <input type="text" class="field-input" data-social="telegram" value="#">
-                </div>
-
-                <div class="card-actions">
-                    <button class="btn primary">Сохранить</button>
-                    <button class="btn danger">Удалить</button>
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <span class="sidebar-logo-icon">⬢</span>
+                <div class="sidebar-logo-text">
+                    <div class="sidebar-logo-title">TL Admin</div>
+                    <div class="sidebar-logo-sub">Конструктор сайта</div>
                 </div>
             </div>
 
-            <div class="card card--rounded team__item team__item-card" data-id="2">
-                <h3 class="card-title">Сотрудник #2</h3>
+            <nav class="sidebar-nav">
+                <div class="nav-group-label">Блоки страницы</div>
+                <button type="button" class="nav-item active" data-section="hero">
+                    <span class="nav-icon">⭐</span>
+                    <span>О наст</span>
+                </button>
+                <button type="button" class="nav-item" data-section="team">
+                    <span class="nav-icon">👥</span>
+                    <span>Команда</span>
+                </button>
+                <button type="button" class="nav-item" data-section="vacancies">
+                    <span class="nav-icon">💼</span>
+                    <span>Вакансии</span>
+                </button>
+                <button type="button" class="nav-item" data-section="benefits">
+                    <span class="nav-icon">🎁</span>
+                    <span>Плюшки</span>
+                </button>
 
-                <label class="field-label">Имя</label>
-                <input type="text" class="field-input team__item-title" value="Мария Иванова">
+                <div class="nav-group-label">Просмотр</div>
+                <a class="nav-item" href="/" target="_blank" rel="noopener">
+                    <span class="nav-icon">👁️</span>
+                    <span>Открыть сайт</span>
+                </a>
+            </nav>
+        </aside>
 
-                <label class="field-label">Должность</label>
-                <input type="text" class="field-input team__item-description" value="Дизайнер">
+        <main class="main">
 
-                <label class="field-label">Фото (путь)</label>
-                <input type="text" class="field-input team__item-image card__image" value="upload/maria.png">
-
-                <div class="team__item-socials">
-                    <label class="field-label">VK</label>
-                    <input type="text" class="field-input" data-social="vk" value="#">
-
-                    <label class="field-label">Telegram</label>
-                    <input type="text" class="field-input" data-social="telegram" value="#">
+            <header class="topbar">
+                <div class="breadcrumb">
+                    <span class="breadcrumb-home">🏠</span>
+                    <span class="breadcrumb-sep">/</span>
+                    <span class="breadcrumb-current" id="breadcrumb">Hero</span>
                 </div>
+                <p class="status" id="status"></p>
+            </header>
 
-                <div class="card-actions">
-                    <button class="btn primary">Сохранить</button>
-                    <button class="btn danger">Удалить</button>
+            <div class="stat-cards">
+                <div class="stat-card">
+                    <div class="stat-label">Сотрудников</div>
+                    <div class="stat-value" id="stat-team">—</div>
                 </div>
-            </div>
-
-            <div class="card card--rounded team__item team__item-card" data-id="3">
-                <h3 class="card-title">Сотрудник #3</h3>
-
-                <label class="field-label">Имя</label>
-                <input type="text" class="field-input team__item-title" value="Дмитрий Петров">
-
-                <label class="field-label">Должность</label>
-                <input type="text" class="field-input team__item-description" value="Backend-разработчик">
-
-                <label class="field-label">Фото (путь)</label>
-                <input type="text" class="field-input team__item-image card__image" value="upload/dmitry.png">
-
-                <div class="team__item-socials">
-                    <label class="field-label">VK</label>
-                    <input type="text" class="field-input" data-social="vk" value="#">
-
-                    <label class="field-label">Telegram</label>
-                    <input type="text" class="field-input" data-social="telegram" value="#">
+                <div class="stat-card">
+                    <div class="stat-label">Вакансий</div>
+                    <div class="stat-value" id="stat-vacancies">—</div>
                 </div>
-
-                <div class="card-actions">
-                    <button class="btn primary">Сохранить</button>
-                    <button class="btn danger">Удалить</button>
+                <div class="stat-card">
+                    <div class="stat-label">Плюшек</div>
+                    <div class="stat-value" id="stat-benefits">—</div>
                 </div>
-            </div>
-        </div>
-
-        <button class="btn add">+ Добавить сотрудника</button>
-    </section>
-
-    <section class="vacancies-section" id="vacancies">
-        <h2 class="section-title">3. Вакансии</h2>
-
-        <div class="cards-grid vacancies__list" id="vacancies-list">
-            <div class="card card--half-rounded vacancies__item" data-id="1">
-                <h3 class="card-title">Вакансия #1</h3>
-
-                <label class="field-label">Название</label>
-                <input type="text" class="field-input vacancies__item-title card__title heading heading--type-card" value="Frontend-разработчик">
-
-                <label class="field-label">Формат / город</label>
-                <input type="text" class="field-input vacancies__item-address card__address" value="удаленно">
-
-                <label class="field-label">Ссылка на hh.ru</label>
-                <input type="text" class="field-input vacancies__item-lik card__footer-link" value="https://hh.ru">
-
-                <div class="card-actions">
-                    <button class="btn primary">Сохранить</button>
-                    <button class="btn danger">Удалить</button>
+                <div class="stat-card stat-card--accent">
+                    <div class="stat-label">Активный блок</div>
+                    <div class="stat-value" id="stat-active">Hero</div>
                 </div>
             </div>
 
-            <div class="card card--half-rounded vacancies__item" data-id="2">
-                <h3 class="card-title">Вакансия #2</h3>
+            <section class="block active hero-section" data-block="hero" id="hero">
+                <h2 class="section-title">О компании — ключевые показатели</h2>
 
-                <label class="field-label">Название</label>
-                <input type="text" class="field-input vacancies__item-title card__title heading heading--type-card" value="Backend-разработчик">
-
-                <label class="field-label">Формат / город</label>
-                <input type="text" class="field-input vacancies__item-address card__address" value="Москва, офис">
-
-                <label class="field-label">Ссылка на hh.ru</label>
-                <input type="text" class="field-input vacancies__item-lik card__footer-link" value="https://hh.ru">
-
-                <div class="card-actions">
-                    <button class="btn primary">Сохранить</button>
-                    <button class="btn danger">Удалить</button>
+                <div class="hero-field">
+                    <label class="field-label">Заголовок</label>
+                    <input type="text" class="field-input hero__title" id="hero-title" value="Разрабатываем IT-решения для путешествий">
                 </div>
-            </div>
 
-            <div class="card card--half-rounded vacancies__item" data-id="3">
-                <h3 class="card-title">Вакансия #3</h3>
+                <h3 class="subsection-title">Ключевые показатели</h3>
+                <div class="stats-list advantages__list" id="hero-stats"></div>
 
-                <label class="field-label">Название</label>
-                <input type="text" class="field-input vacancies__item-title card__title heading heading--type-card" value="QA-инженер">
-
-                <label class="field-label">Формат / город</label>
-                <input type="text" class="field-input vacancies__item-address card__address" value="гибрид">
-
-                <label class="field-label">Ссылка на hh.ru</label>
-                <input type="text" class="field-input vacancies__item-lik card__footer-link" value="https://hh.ru">
-
-                <div class="card-actions">
-                    <button class="btn primary">Сохранить</button>
-                    <button class="btn danger">Удалить</button>
+                <div class="section-actions">
+                    <button type="button" class="btn add" id="hero-add-stat">+ Добавить показатель</button>
+                    <button type="button" class="btn primary" id="hero-save">Сохранить раздел</button>
                 </div>
-            </div>
-        </div>
+            </section>
 
-        <button class="btn add">+ Добавить вакансию</button>
-    </section>
+            <section class="block team-section" data-block="team" id="team">
+                <h2 class="section-title">Команда</h2>
+                <div class="cards-grid team__list" id="team-list"></div>
+                <button type="button" class="btn add" id="team-add">+ Добавить сотрудника</button>
+            </section>
 
-    <section class="benefits-section" id="benefits">
-        <h2 class="section-title">4. Плюшки и все такое</h2>
+            <section class="block vacancies-section" data-block="vacancies" id="vacancies">
+                <h2 class="section-title">Вакансии</h2>
+                <div class="cards-grid vacancies__list" id="vacancies-list"></div>
+                <button type="button" class="btn add" id="vacancies-add">+ Добавить вакансию</button>
+            </section>
 
-        <div class="cards-grid bonus__list" id="benefits-list">
-            <div class="card card--default bonus__item bonus__item--1" data-id="1">
-                <h3 class="card-title">Бонус #1</h3>
+            <section class="block benefits-section" data-block="benefits" id="benefits">
+                <h2 class="section-title">Плюшки и все такое</h2>
+                <div class="cards-grid bonus__list" id="benefits-list"></div>
+                <button type="button" class="btn add" id="benefits-add">+ Добавить бонус</button>
+            </section>
 
-                <label class="field-label">Название</label>
-                <input type="text" class="field-input bonus__item-title card__text" value="Онбординг в компанию">
+            <footer class="admin-footer">
+                <p>© 2026 TravelLine Tech — Админ-панель</p>
+            </footer>
 
-                <label class="field-label">Описание</label>
-                <textarea class="field-input bonus__item-text" rows="3">Наставник поможет быстро включиться в работу.</textarea>
-
-                <div class="card-actions">
-                    <button class="btn primary">Сохранить</button>
-                    <button class="btn danger">Удалить</button>
-                </div>
-            </div>
-
-            <div class="card card--default bonus__item bonus__item--2" data-id="2">
-                <h3 class="card-title">Бонус #2</h3>
-
-                <label class="field-label">Название</label>
-                <input type="text" class="field-input bonus__item-title card__text" value="ДМС">
-
-                <label class="field-label">Описание</label>
-                <textarea class="field-input bonus__item-text" rows="3">Расширенная медицинская страховка.</textarea>
-
-                <div class="card-actions">
-                    <button class="btn primary">Сохранить</button>
-                    <button class="btn danger">Удалить</button>
-                </div>
-            </div>
-
-            <div class="card card--default bonus__item bonus__item--3" data-id="3">
-                <h3 class="card-title">Бонус #3</h3>
-
-                <label class="field-label">Название</label>
-                <input type="text" class="field-input bonus__item-title card__text" value="Обучение и развитие">
-
-                <label class="field-label">Описание</label>
-                <textarea class="field-input bonus__item-text" rows="3">Компенсируем курсы и участие в конференциях.</textarea>
-
-                <div class="card-actions">
-                    <button class="btn primary">Сохранить</button>
-                    <button class="btn danger">Удалить</button>
-                </div>
-            </div>
-        </div>
-
-        <button class="btn add">+ Добавить бонус</button>
-    </section>
-
-    <footer class="admin-footer">
-        <p>© 2026 TravelLine Tech — Админ-панель</p>
-    </footer>
+        </main>
+    </div>
 
     <script src="admin.js"></script>
 </body>

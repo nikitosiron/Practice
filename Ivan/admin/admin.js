@@ -1,99 +1,151 @@
 // Показывает сообщение в строке статуса под заголовком админки.
 // message — текст, type — 'success' или 'error' (влияет на цвет через CSS).
 function showStatus(message, type) {
-    // Если type не передали — считаем, что это успех (зелёный).
     if (type === undefined) {
         type = 'success';
     }
-
-    // Находим <p id="status"> в разметке.
     var status = document.querySelector('#status');
-
-    // Защита: если элемента почему-то нет — молча выходим.
     if (!status) {
         return;
     }
-
-    // Записываем текст сообщения.
     status.textContent = message;
-
-    // Назначаем классы: базовый "status" + модификатор по типу.
-    // В CSS .status.success зелёный, .status.error красный.
     status.className = 'status ' + type;
 }
 
+// Универсальный fetch-обёртка для POST/PUT/DELETE/GET с JSON-телом.
+// Возвращает промис response (как обычный fetch).
+function apiRequest(method, url, data) {
+    var options = { method: method };
+    if (data !== undefined) {
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify(data);
+    }
+    return fetch(url, options);
+}
+
 // Загружает все данные сайта с сервера и раскладывает их по секциям админки.
-// fetch возвращает промис → работаем с ним через .then() / .catch() (без async/await).
 function loadData() {
     fetch('/api/data')
         .then(function (response) {
-            // response.ok = true, если статус 200–299.
-            // Если сервер ответил ошибкой — кидаем исключение, оно уйдёт в .catch.
             if (!response.ok) {
                 throw new Error('Не удалось загрузить данные');
             }
-            // response.json() — тоже промис. Возвращаем его, чтобы следующий
-            // .then получил уже распарсенный JSON-объект.
             return response.json();
         })
         .then(function (data) {
-            // data — это { hero, team, vacancies, benefits }.
-            // Раскладываем каждый блок в свою рендер-функцию.
             renderHeroForm(data.hero);
             renderTeam(data.team);
             renderVacancies(data.vacancies);
             renderBenefits(data.benefits);
+            updateStatCards(data);
+            isDirty = false;  // данные свежие — состояние формы чистое
         })
         .catch(function (error) {
-            // Ловим ЛЮБУЮ ошибку из цепочки: сеть, парсинг, наш throw выше.
             showStatus('Ошибка загрузки: ' + error.message, 'error');
         });
 }
 
-// Заполняет форму Hero данными с сервера.
-// hero — объект { title: '...', stats: [{value, label}, ...] }
-function renderHeroForm(hero) {
-    // 1) Заголовок: ищем input и подставляем значение.
-    var titleInput = document.querySelector('#hero-title');
-    titleInput.value = hero.title;
+// ─── Навигация и UI-обвязка ────────────────────────────────
 
-    // 2) Список статистики. Сначала ОЧИЩАЕМ контейнер,
-    //    иначе при повторном вызове строки задублируются.
-    var statsList = document.querySelector('#hero-stats');
-    statsList.innerHTML = '';
+// Состояние: грязная ли форма (есть ли несохранённые изменения).
+var isDirty = false;
 
-    // 3) Для каждого элемента массива stats строим строку и добавляем в список.
-    for (var i = 0; i < hero.stats.length; i++) {
-        var stat = hero.stats[i];
-        var row = buildStatRow(stat);
-        statsList.appendChild(row);
+// Метки для хлебной крошки и stat-карточки "Активный блок".
+var sectionLabels = {
+    hero: 'Hero',
+    team: 'Команда',
+    vacancies: 'Вакансии',
+    benefits: 'Плюшки'
+};
+
+// Переключает видимый блок и обновляет nav/breadcrumb/stat.
+function switchSection(name) {
+    // Все .block — скрыть, .nav-item — снять active.
+    var blocks = document.querySelectorAll('.block');
+    for (var i = 0; i < blocks.length; i++) {
+        blocks[i].classList.remove('active');
+    }
+    var navItems = document.querySelectorAll('.nav-item[data-section]');
+    for (var j = 0; j < navItems.length; j++) {
+        navItems[j].classList.remove('active');
+    }
+
+    // Включить нужный блок и nav-item.
+    var block = document.querySelector('.block[data-block="' + name + '"]');
+    var navItem = document.querySelector('.nav-item[data-section="' + name + '"]');
+    if (block) block.classList.add('active');
+    if (navItem) navItem.classList.add('active');
+
+    // Обновить breadcrumb и stat-карточку.
+    document.querySelector('#breadcrumb').textContent = sectionLabels[name] || name;
+    document.querySelector('#stat-active').textContent = sectionLabels[name] || name;
+}
+
+// Вешает обработчики на кнопки сайдбара.
+function wireSidebar() {
+    var navItems = document.querySelectorAll('.nav-item[data-section]');
+    for (var i = 0; i < navItems.length; i++) {
+        navItems[i].addEventListener('click', function () {
+            var target = this.getAttribute('data-section');
+
+            // Если форма грязная — предупреждаем при переключении.
+            if (isDirty) {
+                if (!confirm('Есть несохранённые изменения. Переключиться без сохранения?')) {
+                    return;
+                }
+                isDirty = false;
+            }
+
+            switchSection(target);
+        });
     }
 }
 
-// Создаёт DOM-элемент одной строки статистики.
-// Возвращает <div class="stats-row advantages__item"> с двумя input-ами и кнопкой Удалить.
+// Обновляет счётчики в stat-карточках после loadData.
+function updateStatCards(data) {
+    document.querySelector('#stat-team').textContent = data.team.length;
+    document.querySelector('#stat-vacancies').textContent = data.vacancies.length;
+    document.querySelector('#stat-benefits').textContent = data.benefits.length;
+}
+
+// Отслеживает изменения в формах — выставляет isDirty = true.
+// Слушаем на body через делегирование: ловим любой input/change в любом поле.
+function wireDirtyTracking() {
+    document.body.addEventListener('input', function (event) {
+        if (event.target.matches('input, textarea')) {
+            isDirty = true;
+        }
+    });
+}
+
+// ─── Hero ───────────────────────────────────────────────────
+
+function renderHeroForm(hero) {
+    document.querySelector('#hero-title').value = hero.title;
+
+    var statsList = document.querySelector('#hero-stats');
+    statsList.innerHTML = '';
+    for (var i = 0; i < hero.stats.length; i++) {
+        statsList.appendChild(buildStatRow(hero.stats[i]));
+    }
+}
+
 function buildStatRow(stat) {
-    // Внешний контейнер строки.
     var row = document.createElement('div');
     row.className = 'stats-row advantages__item';
 
-    // Поле "значение" (300+, 12 000+).
     var value = document.createElement('input');
     value.type = 'text';
     value.className = 'field-input stats-value advantages__item-title';
     value.value = stat.value;
     row.appendChild(value);
 
-    // Поле "подпись" (сотрудников, клиентов).
     var label = document.createElement('input');
     label.type = 'text';
     label.className = 'field-input stats-label';
     label.value = stat.label;
     row.appendChild(label);
 
-    // Кнопка "Удалить" — убирает строку из DOM.
-    // На сервер ничего не шлём: Hero сохраняется целиком через PUT /api/hero,
-    // и saveHero() возьмёт текущее состояние формы — уже без удалённой строки.
     var del = document.createElement('button');
     del.className = 'btn danger';
     del.textContent = 'Удалить';
@@ -105,31 +157,22 @@ function buildStatRow(stat) {
     return row;
 }
 
-// Собирает текущее состояние формы Hero обратно в объект.
-// Возвращает { title, stats: [{value, label}, ...] } — то, что отправим на сервер.
 function collectHeroData() {
-    // Берём текущее значение заголовка.
     var title = document.querySelector('#hero-title').value;
-
-    // Проходим по всем строкам статистики и собираем их значения.
     var stats = [];
     var rows = document.querySelectorAll('#hero-stats .stats-row');
     for (var i = 0; i < rows.length; i++) {
-        var row = rows[i];
-        var value = row.querySelector('.stats-value').value;
-        var label = row.querySelector('.stats-label').value;
-        stats.push({ value: value, label: label });
+        stats.push({
+            value: rows[i].querySelector('.stats-value').value,
+            label: rows[i].querySelector('.stats-label').value
+        });
     }
-
     return { title: title, stats: stats };
 }
 
-// Сохраняет Hero на сервере через PUT /api/hero.
 function saveHero() {
-    // 1) Собираем данные из формы.
     var data = collectHeroData();
 
-    // 2) Простая валидация: заголовок и поля статистики не должны быть пустыми.
     if (data.title.trim() === '') {
         showStatus('Заполните заголовок Hero', 'error');
         return;
@@ -141,41 +184,30 @@ function saveHero() {
         }
     }
 
-    // 3) Отправляем PUT-запрос. Тело — JSON-строка.
-    fetch('/api/hero', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    })
+    apiRequest('PUT', '/api/hero', data)
         .then(function (response) {
-            if (!response.ok) {
-                throw new Error('Сервер ответил ошибкой');
-            }
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
             return response.json();
         })
         .then(function () {
             showStatus('Сохранено');
+            isDirty = false;
         })
         .catch(function (error) {
             showStatus('Ошибка сохранения: ' + error.message, 'error');
         });
 }
 
-// Добавляет в Hero пустую строку статистики.
 function addStat() {
     var statsList = document.querySelector('#hero-stats');
     var row = buildStatRow({ value: '', label: '' });
     statsList.appendChild(row);
-    // Фокусируем первое поле — удобно сразу начать ввод.
     row.querySelector('.stats-value').focus();
 }
 
-// ─── Универсальные хелперы ─────────────────────────────────
+// ─── Универсальные хелперы для карточек ────────────────────
 
-// Создаёт пару <label> + <input>, возвращает фрагмент (label и input — соседние элементы).
-// Используется во всех buildXxxCard, чтобы не повторять одно и то же.
-// extraClasses — строка с дополнительными классами на input через пробел.
-// dataSocial — необязательное значение для атрибута data-social (только для соц-ссылок).
+// Создаёт пару <label> + <input>, возвращает фрагмент.
 function buildField(labelText, extraClasses, value, dataSocial) {
     var fragment = document.createDocumentFragment();
 
@@ -196,20 +228,22 @@ function buildField(labelText, extraClasses, value, dataSocial) {
     return fragment;
 }
 
-// Создаёт пару кнопок "Сохранить" и "Удалить" в обёртке .card-actions.
-// Обработчики не вешаем — будут в день 3, когда Никита поднимет POST/PUT/DELETE.
-function buildCardActions() {
+// Создаёт пару кнопок "Сохранить" и "Удалить".
+// onSave и onDelete — функции-обработчики кликов.
+function buildCardActions(onSave, onDelete) {
     var actions = document.createElement('div');
     actions.className = 'card-actions';
 
     var save = document.createElement('button');
     save.className = 'btn primary';
     save.textContent = 'Сохранить';
+    save.addEventListener('click', onSave);
     actions.appendChild(save);
 
     var del = document.createElement('button');
     del.className = 'btn danger';
     del.textContent = 'Удалить';
+    del.addEventListener('click', onDelete);
     actions.appendChild(del);
 
     return actions;
@@ -221,8 +255,7 @@ function renderTeam(team) {
     var list = document.querySelector('#team-list');
     list.innerHTML = '';
     for (var i = 0; i < team.length; i++) {
-        var card = buildTeamCard(team[i], i + 1);
-        list.appendChild(card);
+        list.appendChild(buildTeamCard(team[i], i + 1));
     }
 }
 
@@ -240,15 +273,86 @@ function buildTeamCard(member, index) {
     card.appendChild(buildField('Должность', 'team__item-description', member.position));
     card.appendChild(buildField('Фото (путь)', 'team__item-image card__image', member.photo));
 
-    // VK и Telegram — внутри обёртки .team__item-socials.
     var socials = document.createElement('div');
     socials.className = 'team__item-socials';
     socials.appendChild(buildField('VK', '', member.vk, 'vk'));
-    socials.appendChild(buildField('Telegram', '', member.telegram, 'telegram'));
     card.appendChild(socials);
 
-    card.appendChild(buildCardActions());
+    // Обработчики save/delete используют замыкания на member.id и card.
+    card.appendChild(buildCardActions(
+        function () { saveTeamMember(member.id, card); },
+        function () { deleteTeamMember(member.id); }
+    ));
     return card;
+}
+
+function collectTeamData(card) {
+    return {
+        name: card.querySelector('.team__item-title').value,
+        position: card.querySelector('.team__item-description').value,
+        photo: card.querySelector('.team__item-image').value,
+        vk: card.querySelector('[data-social="vk"]').value
+    };
+}
+
+function saveTeamMember(id, card) {
+    var data = collectTeamData(card);
+
+    if (data.name.trim() === '' || data.position.trim() === '' || data.photo.trim() === '') {
+        showStatus('Заполните имя, должность и фото сотрудника', 'error');
+        return;
+    }
+
+    apiRequest('PUT', '/api/team/' + id, data)
+        .then(function (response) {
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
+            return response.json();
+        })
+        .then(function () {
+            showStatus('Сотрудник сохранён');
+            isDirty = false;
+        })
+        .catch(function (error) {
+            showStatus('Ошибка сохранения: ' + error.message, 'error');
+        });
+}
+
+function addTeamMember() {
+    apiRequest('POST', '/api/team', {
+        name: 'Новый сотрудник',
+        position: 'Должность',
+        photo: '',
+        vk: '#'
+    })
+        .then(function (response) {
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
+            return response.json();
+        })
+        .then(function () {
+            showStatus('Сотрудник добавлен');
+            loadData();  // перерисуем список с актуальными данными
+        })
+        .catch(function (error) {
+            showStatus('Ошибка добавления: ' + error.message, 'error');
+        });
+}
+
+function deleteTeamMember(id) {
+    if (!confirm('Удалить сотрудника?')) {
+        return;
+    }
+
+    apiRequest('DELETE', '/api/team/' + id)
+        .then(function (response) {
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
+        })
+        .then(function () {
+            showStatus('Сотрудник удалён');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка удаления: ' + error.message, 'error');
+        });
 }
 
 // ─── Вакансии ───────────────────────────────────────────────
@@ -257,8 +361,7 @@ function renderVacancies(vacancies) {
     var list = document.querySelector('#vacancies-list');
     list.innerHTML = '';
     for (var i = 0; i < vacancies.length; i++) {
-        var card = buildVacancyCard(vacancies[i], i + 1);
-        list.appendChild(card);
+        list.appendChild(buildVacancyCard(vacancies[i], i + 1));
     }
 }
 
@@ -276,8 +379,78 @@ function buildVacancyCard(vacancy, index) {
     card.appendChild(buildField('Формат / город', 'vacancies__item-address card__address', vacancy.format));
     card.appendChild(buildField('Ссылка на hh.ru', 'vacancies__item-lik card__footer-link', vacancy.url));
 
-    card.appendChild(buildCardActions());
+    card.appendChild(buildCardActions(
+        function () { saveVacancy(vacancy.id, card); },
+        function () { deleteVacancy(vacancy.id); }
+    ));
     return card;
+}
+
+function collectVacancyData(card) {
+    return {
+        title: card.querySelector('.vacancies__item-title').value,
+        format: card.querySelector('.vacancies__item-address').value,
+        url: card.querySelector('.vacancies__item-lik').value
+    };
+}
+
+function saveVacancy(id, card) {
+    var data = collectVacancyData(card);
+
+    if (data.title.trim() === '' || data.format.trim() === '' || data.url.trim() === '') {
+        showStatus('Заполните все поля вакансии', 'error');
+        return;
+    }
+
+    apiRequest('PUT', '/api/vacancies/' + id, data)
+        .then(function (response) {
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
+            return response.json();
+        })
+        .then(function () {
+            showStatus('Вакансия сохранена');
+            isDirty = false;
+        })
+        .catch(function (error) {
+            showStatus('Ошибка сохранения: ' + error.message, 'error');
+        });
+}
+
+function addVacancy() {
+    apiRequest('POST', '/api/vacancies', {
+        title: 'Новая вакансия',
+        format: 'удаленно',
+        url: 'https://hh.ru'
+    })
+        .then(function (response) {
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
+            return response.json();
+        })
+        .then(function () {
+            showStatus('Вакансия добавлена');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка добавления: ' + error.message, 'error');
+        });
+}
+
+function deleteVacancy(id) {
+    if (!confirm('Удалить вакансию?')) {
+        return;
+    }
+
+    apiRequest('DELETE', '/api/vacancies/' + id)
+        .then(function (response) {
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
+        })
+        .then(function () {
+            showStatus('Вакансия удалена');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка удаления: ' + error.message, 'error');
+        });
 }
 
 // ─── Плюшки ─────────────────────────────────────────────────
@@ -286,14 +459,12 @@ function renderBenefits(benefits) {
     var list = document.querySelector('#benefits-list');
     list.innerHTML = '';
     for (var i = 0; i < benefits.length; i++) {
-        var card = buildBenefitCard(benefits[i], i + 1);
-        list.appendChild(card);
+        list.appendChild(buildBenefitCard(benefits[i], i + 1));
     }
 }
 
 function buildBenefitCard(benefit, index) {
     var card = document.createElement('div');
-    // Модификатор bonus__item--N из списка участника 3.
     card.className = 'card card--default bonus__item bonus__item--' + index;
     card.dataset.id = benefit.id;
 
@@ -304,7 +475,6 @@ function buildBenefitCard(benefit, index) {
 
     card.appendChild(buildField('Название', 'bonus__item-title card__text', benefit.title));
 
-    // Описание — это textarea, а не input. Хелпер не подходит, делаем вручную.
     var descLabel = document.createElement('label');
     descLabel.className = 'field-label';
     descLabel.textContent = 'Описание';
@@ -316,19 +486,91 @@ function buildBenefitCard(benefit, index) {
     desc.value = benefit.description;
     card.appendChild(desc);
 
-    card.appendChild(buildCardActions());
+    card.appendChild(buildCardActions(
+        function () { saveBenefit(benefit.id, card); },
+        function () { deleteBenefit(benefit.id); }
+    ));
     return card;
+}
+
+function collectBenefitData(card) {
+    return {
+        title: card.querySelector('.bonus__item-title').value,
+        description: card.querySelector('.bonus__item-text').value
+    };
+}
+
+function saveBenefit(id, card) {
+    var data = collectBenefitData(card);
+
+    if (data.title.trim() === '' || data.description.trim() === '') {
+        showStatus('Заполните название и описание бонуса', 'error');
+        return;
+    }
+
+    apiRequest('PUT', '/api/benefits/' + id, data)
+        .then(function (response) {
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
+            return response.json();
+        })
+        .then(function () {
+            showStatus('Бонус сохранён');
+            isDirty = false;
+        })
+        .catch(function (error) {
+            showStatus('Ошибка сохранения: ' + error.message, 'error');
+        });
+}
+
+function addBenefit() {
+    apiRequest('POST', '/api/benefits', {
+        title: 'Новый бонус',
+        description: 'Описание бонуса'
+    })
+        .then(function (response) {
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
+            return response.json();
+        })
+        .then(function () {
+            showStatus('Бонус добавлен');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка добавления: ' + error.message, 'error');
+        });
+}
+
+function deleteBenefit(id) {
+    if (!confirm('Удалить бонус?')) {
+        return;
+    }
+
+    apiRequest('DELETE', '/api/benefits/' + id)
+        .then(function (response) {
+            if (!response.ok) throw new Error('Сервер ответил ошибкой');
+        })
+        .then(function () {
+            showStatus('Бонус удалён');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка удаления: ' + error.message, 'error');
+        });
 }
 
 // ─── Привязка статических кнопок ────────────────────────────
 
-function wireHero() {
+function wireStaticButtons() {
     document.querySelector('#hero-add-stat').addEventListener('click', addStat);
     document.querySelector('#hero-save').addEventListener('click', saveHero);
+    document.querySelector('#team-add').addEventListener('click', addTeamMember);
+    document.querySelector('#vacancies-add').addEventListener('click', addVacancy);
+    document.querySelector('#benefits-add').addEventListener('click', addBenefit);
 }
 
-// Запускаем загрузку и подвязываем обработчики, как только страница готова.
 document.addEventListener('DOMContentLoaded', function () {
+    wireStaticButtons();
+    wireSidebar();
+    wireDirtyTracking();
     loadData();
-    wireHero();
 });
