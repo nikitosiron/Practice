@@ -1,7 +1,12 @@
 const express = require('express');
 const path = require('path');
 const { readData } = require('./src/storage');
-const { updateHero, addTeamMember, updateTeamMember, deleteTeamMember } = require('./src/dataService');
+const {
+    updateHero,
+    addTeamMember, updateTeamMember, deleteTeamMember,
+    addVacancy, updateVacancy, deleteVacancy,
+    addBenefit, updateBenefit, deleteBenefit,
+} = require('./src/dataService');
 
 const app = express();
 const PORT = 3000;
@@ -70,6 +75,94 @@ app.delete('/api/team/:id', async (req, res) => {
         res.json({ success: true, data: removed });
     } catch (err) {
         console.error('DELETE /api/team/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.post('/api/vacancies', async (req, res) => {
+    try {
+        const created = await addVacancy(req.body);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        console.error('POST /api/vacancies:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.put('/api/vacancies/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const updated = await updateVacancy(id, req.body);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('PUT /api/vacancies/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.delete('/api/vacancies/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const removed = await deleteVacancy(id);
+        res.json({ success: true, data: removed });
+    } catch (err) {
+        console.error('DELETE /api/vacancies/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.post('/api/benefits', async (req, res) => {
+    try {
+        const created = await addBenefit(req.body);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        console.error('POST /api/benefits:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.put('/api/benefits/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const updated = await updateBenefit(id, req.body);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('PUT /api/benefits/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.delete('/api/benefits/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const removed = await deleteBenefit(id);
+        res.json({ success: true, data: removed });
+    } catch (err) {
+        console.error('DELETE /api/benefits/:id:', err);
         const status = err.status || 500;
         const message = err.status ? err.message : 'Внутренняя ошибка сервера';
         res.status(status).json({ success: false, message });

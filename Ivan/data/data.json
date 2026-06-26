@@ -1,24 +1,7 @@
 {
   "hero": {
     "title": "Стабильно растем и принимаем новые вызовы TravelTech индустрии",
-    "stats": [
-      {
-        "value": "dwdwdwdwd",
-        "label": "wwddwdwqdqw"
-      },
-      {
-        "value": "300+",
-        "label": "сотрудников в техотделе"
-      },
-      {
-        "value": "dwdw",
-        "label": "dwdw"
-      },
-      {
-        "value": "првиет",
-        "label": "тест"
-      }
-    ]
+    "stats": []
   },
   "team": [
     {
@@ -36,24 +19,17 @@
       "vk": "#"
     },
     {
-      "id": 4,
-      "name": "Новый сотрудник",
-      "position": "Должность",
-      "photo": "",
-      "vk": "#"
-    },
-    {
       "id": 5,
       "name": "nikitosiron",
       "position": "ceo",
-      "photo": "eweqdeqwd",
+      "photo": "upload/placeholder-avatar.svg",
       "vk": "#"
     },
     {
       "id": 6,
-      "name": "прием",
-      "position": "сео",
-      "photo": "аууау",
+      "name": "Новый сотрудник",
+      "position": "Должность",
+      "photo": "upload/placeholder-avatar.svg",
       "vk": "#"
     }
   ],
@@ -75,6 +51,12 @@
       "title": "Python Developer AI team",
       "format": "Йошкар-Ола",
       "url": "https://kazan.hh.ru/vacancy/133500742"
+    },
+    {
+      "id": 4,
+      "title": "d",
+      "format": "dwdw",
+      "url": "https://kazan.hh.ru/vacancy/133500742"
     }
   ],
   "benefits": [
@@ -92,6 +74,11 @@
       "id": 3,
       "title": "Бонусы",
       "description": "Премии и мерч, финансовая поддержка от компании на важные события в жизни. Ежегодный бонус на покупку техники."
+    },
+    {
+      "id": 4,
+      "title": "test1",
+      "description": "dwdwdwdwd"
     }
   ]
 }

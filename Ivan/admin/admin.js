@@ -23,6 +23,18 @@ function apiRequest(method, url, data) {
     return fetch(url, options);
 }
 
+// Сервер всегда отвечает JSON-телом { success, data } или { success: false, message }.
+// Разбираем тело и, если success === false, бросаем Error с РЕАЛЬНЫМ текстом
+// от сервера (а не общим "Сервер ответил ошибкой") — так видно настоящую причину.
+function parseApiResponse(response) {
+    return response.json().then(function (body) {
+        if (!body.success) {
+            throw new Error(body.message || 'Сервер ответил ошибкой');
+        }
+        return body;
+    });
+}
+
 // Загружает все данные сайта с сервера и раскладывает их по секциям админки.
 function loadData() {
     fetch('/api/data')
@@ -185,10 +197,7 @@ function saveHero() {
     }
 
     apiRequest('PUT', '/api/hero', data)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Сохранено');
             isDirty = false;
@@ -304,10 +313,7 @@ function saveTeamMember(id, card) {
     }
 
     apiRequest('PUT', '/api/team/' + id, data)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Сотрудник сохранён');
             isDirty = false;
@@ -324,10 +330,7 @@ function addTeamMember() {
         photo: '',
         vk: '#'
     })
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Сотрудник добавлен');
             loadData();  // перерисуем список с актуальными данными
@@ -343,9 +346,7 @@ function deleteTeamMember(id) {
     }
 
     apiRequest('DELETE', '/api/team/' + id)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Сотрудник удалён');
             loadData();
@@ -403,10 +404,7 @@ function saveVacancy(id, card) {
     }
 
     apiRequest('PUT', '/api/vacancies/' + id, data)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Вакансия сохранена');
             isDirty = false;
@@ -422,10 +420,7 @@ function addVacancy() {
         format: 'удаленно',
         url: 'https://hh.ru'
     })
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Вакансия добавлена');
             loadData();
@@ -441,9 +436,7 @@ function deleteVacancy(id) {
     }
 
     apiRequest('DELETE', '/api/vacancies/' + id)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Вакансия удалена');
             loadData();
@@ -509,10 +502,7 @@ function saveBenefit(id, card) {
     }
 
     apiRequest('PUT', '/api/benefits/' + id, data)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Бонус сохранён');
             isDirty = false;
@@ -527,10 +517,7 @@ function addBenefit() {
         title: 'Новый бонус',
         description: 'Описание бонуса'
     })
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Бонус добавлен');
             loadData();
@@ -546,9 +533,7 @@ function deleteBenefit(id) {
     }
 
     apiRequest('DELETE', '/api/benefits/' + id)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Бонус удалён');
             loadData();
