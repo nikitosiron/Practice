@@ -957,3 +957,441 @@ Nikita/
 `storage.js`. Слои продолжим наращивать на Дне 3 (`dataService.js`).
 
 ---
+
+# День 3 — слой бизнес-логики (`src/dataService.js`) + API hero/team
+
+## План Дня 3
+
+Цель дня: добавить **второй слой** — `src/dataService.js` (бизнес-логика) —
+и поднять «мутирующие» маршруты для `hero` и `team`, плюс первые автотесты.
+
+Этапы:
+- **3.1** Теория: REST-операции (POST/PUT/DELETE), `req.body`, `req.params`,
+  коды 201/400/404, валидация.
+- **3.2** `dataService.js`: `getNextId(list)`, `updateHero(hero)`.
+- **3.3** `dataService.js`: CRUD team (`addTeamMember`/`updateTeamMember`/
+  `deleteTeamMember`).
+- **3.4** Маршруты в `server.js`: `PUT /api/hero`, `POST/PUT/DELETE /api/team`.
+- **3.5** Автотесты через `node --test`.
+- **3.6** Дымовой прогон (curl). *(сделали раньше — между 3.4 и 3.5.)*
+- **3.7** Итог дня.
+
+### Изменение контракта: убрали `telegram`
+
+Командой решили **убрать поле `telegram`** из `team`, оставив только `vk`
+(не разглашать лишние контакты). Новый контракт сотрудника:
+`{ id, name, position, photo, vk }`. Поправили в трёх местах: валидация,
+`addTeamMember`/`updateTeamMember`, и сами данные `data/data.json`.
+**Урок:** контракт — общий с Егором и Иваном; менять только синхронно со
+всей командой, иначе на стыке (День 5) будут расхождения.
+
+---
+
+## Этап 3.1 — REST, `req.body`, `req.params`, коды, валидация
+
+### HTTP-методы (REST)
+
+URL = ресурс, метод = что с ним сделать. `/api/team` — коллекция,
+`/api/team/2` — конкретный сотрудник.
+
+| Метод | Намерение | Тело? |
+|---|---|---|
+| GET | прочитать, не меняя | нет |
+| POST | создать новый | да |
+| PUT | заменить/обновить существующий | да |
+| DELETE | удалить | обычно нет |
+
+GET не должен менять данные; POST/PUT/DELETE — меняют. В Express:
+`app.get/post/put/delete(путь, обработчик)`.
+
+### `req.body` — тело запроса
+
+Распарсенное тело POST/PUT. Работает **только** при подключённом
+`app.use(express.json())` (повесили ещё в Дне 1) — он парсит JSON-тело в
+объект и кладёт в `req.body`. Без него `req.body === undefined`.
+**`req.body` приходит от клиента — доверять нельзя** → валидация.
+
+### `req.params` — переменные пути (`:id`)
+
+```js
+app.put('/api/team/:id', (req, res) => {
+    const id = req.params.id;   // "2" — ВСЕГДА СТРОКА!
+});
+```
+`:id` в пути объявляет переменную; `req.params` = `{ id: "2" }`.
+**Грабли:** `req.params.id` — строка, а `id` в данных — число. `2 === "2"`
+→ `false`. Нужно `Number(req.params.id)`.
+(`req.query` — это `?key=value`, нам пока не нужен.)
+
+### Коды ответов
+
+| Код | Значение | Когда |
+|---|---|---|
+| 200 OK | успех | GET, удачные PUT/DELETE |
+| 201 Created | создан ресурс | удачный POST |
+| 400 Bad Request | плохие данные клиента | провал валидации |
+| 404 Not Found | ресурс не найден | нет такого id |
+| 500 Internal Server Error | сервер сам сломался | ошибка файла |
+
+**4xx — виноват клиент, 5xx — виноват сервер.** По коду фронт решает, что
+показать пользователю.
+
+### Валидация
+
+Проверка `req.body` до записи: поля на месте, нужного типа, не пустые.
+Плохо → `400`, не пишем в файл. **Где:** в `dataService` (правила «что такое
+валидный сотрудник» — про предметную область, не про HTTP).
+
+---
+
+## Этап 3.2 — `getNextId` и `updateHero`
+
+### Зачем третий слой (`dataService`)
+
+```
+HTTP (server.js) → бизнес-логика (dataService.js) → хранение (storage.js) → data.json
+```
+Каждый слой знает только соседа снизу. `storage` — «тупой» (читай/пиши весь
+файл), `dataService` — правила (валидация, id, CRUD), `server` — HTTP.
+Классика: **controller → service → repository**. Без слоя получился бы
+«толстый контроллер» с дублированием и нетестируемой логикой.
+
+### `getNextId(list)` — чистая функция
+
+```js
+function getNextId(list) {
+    if (list.length === 0) return 1;
+    return Math.max(...list.map(item => item.id)) + 1;
+}
+```
+- **`.map(item => item.id)`** — метод массива: из `[{id:1},{id:2}]` делает
+  новый массив `[1, 2]`.
+- **`Math.max(a, b, c)`** — макс из аргументов (через запятую, не массив!).
+- **`...` (spread)** — раскрывает массив в аргументы: `Math.max(...[1,2,3])`
+  = `Math.max(1,2,3)`. Без спреда `Math.max([1,2,3])` = `NaN`.
+- **Пустой массив отдельно** → `1` (иначе `Math.max()` = `-Infinity`).
+- id **не переиспользуются**: из `[1,3]` следующий — `4`, не `2`.
+- **Чистая функция** (нет I/O, нет побочных эффектов) — легче всего тестировать.
+
+### Сигнал об ошибке валидации: бросаем Error со `.status`
+
+Выбрали **бросать исключение** (а не возвращать `{ok:false}`) — ложится на
+существующий `try/catch` в маршрутах, продолжает принцип «низкий слой бросает,
+верхний решает». К объекту `Error` дописываем своё поле `.status`:
+```js
+function validationError(message) {
+    const err = new Error(message);
+    err.status = 400;            // объекту Error можно дописать своё поле
+    return err;
+}
+// бросаем на месте: throw validationError('...')
+```
+Маршрут потом разрулит по `err.status` (есть → 400/404, нет → 500).
+
+### `updateHero(hero)` — паттерн мутации
+
+```js
+async function updateHero(hero) {
+    if (!hero || typeof hero !== 'object') throw validationError('...');
+    if (typeof hero.title !== 'string' || hero.title.trim() === '') throw validationError('...');
+    if (!Array.isArray(hero.stats)) throw validationError('...');
+
+    const data = await readData();                       // 1. прочитать ВСЁ
+    data.hero = { title: hero.title, stats: hero.stats }; // 2. изменить кусок
+    await writeData(data);                               // 3. записать ВСЁ
+    return data.hero;
+}
+```
+Паттерн файлового хранилища: **читать всё → менять в памяти → писать всё**
+(`writeData` перезаписывает файл целиком — грабли Дня 2).
+
+Валидация по блокам:
+- **`!hero || typeof hero !== 'object'`** — `typeof null === 'object'`
+  (причуда JS!), поэтому `!hero` отдельно отсекает `null`/`undefined`.
+- **`.trim() === ''`** — срезает пробелы; ловит `""` и `"   "`. Делать
+  **после** проверки на строку (иначе `.trim()` упадёт).
+- **`Array.isArray(x)`** — единственный надёжный способ (`typeof []` =
+  `'object'`).
+- **`data.hero = { title:..., stats:... }`** — пересобираем из **проверенных**
+  полей, а не `= hero`: лишние поля клиента (`hero.hacked`) не попадут в файл.
+
+---
+
+## Этап 3.3 — CRUD team
+
+### Новые конструкции
+
+- **`.find(pred)`** → сам объект или `undefined`; **`.findIndex(pred)`** →
+  индекс или `-1`. Для update/delete нужен индекс → `findIndex`.
+  `-1` = «не найдено» (соглашение JS).
+- **`.push(x)`** — добавить в конец (для add).
+- **`.splice(i, n)`** — вырезать `n` элементов с позиции `i`, **вернуть
+  массив вырезанных**. `const [removed] = arr.splice(i, 1)` — деструктуризация.
+- **Spread в объекте** `{ ...старый, поле: новое }` — копирует все поля,
+  поверх кладёт новые. `id` сохраняется из `...старый`.
+- **`??` (nullish coalescing)** — «левое, а если `null`/`undefined` — правое».
+  Отличие от `||`: `??` НЕ срабатывает на `""`/`0`/`false`. Поэтому
+  `photo: member.photo ?? старое` — пустую строку уважаем как осознанный выбор.
+
+### Три функции
+
+```js
+function notFoundError(message) {   // как validationError, но status = 404
+    const err = new Error(message);
+    err.status = 404;
+    return err;
+}
+
+function validateTeamMember(member) {   // зовут и add, и update — не дублируем
+    if (!member || typeof member !== 'object') throw validationError('...');
+    if (typeof member.name !== 'string' || member.name.trim() === '') throw validationError('...');
+    if (typeof member.position !== 'string' || member.position.trim() === '') throw validationError('...');
+}
+
+async function addTeamMember(member) {
+    validateTeamMember(member);
+    const data = await readData();
+    const newMember = {
+        id: getNextId(data.team),     // id назначает СЕРВЕР, не клиент
+        name: member.name,
+        position: member.position,
+        photo: member.photo ?? '',
+        vk: member.vk ?? '#',
+    };
+    data.team.push(newMember);
+    await writeData(data);
+    return newMember;
+}
+
+async function updateTeamMember(id, member) {
+    validateTeamMember(member);
+    const data = await readData();
+    const index = data.team.findIndex(m => m.id === id);
+    if (index === -1) throw notFoundError(`Сотрудник с id=${id} не найден`);
+    const updated = { ...data.team[index], name: member.name, position: member.position,
+                      photo: member.photo ?? data.team[index].photo,
+                      vk: member.vk ?? data.team[index].vk };
+    data.team[index] = updated;
+    await writeData(data);
+    return updated;
+}
+
+async function deleteTeamMember(id) {
+    const data = await readData();
+    const index = data.team.findIndex(m => m.id === id);
+    if (index === -1) throw notFoundError(`Сотрудник с id=${id} не найден`);
+    const [removed] = data.team.splice(index, 1);
+    await writeData(data);            // ← БЕЗ ЭТОГО удаление не сохранится!
+    return removed;
+}
+```
+
+### Грабли 3.3 (поймал при проверке моего кода)
+
+1. **`deleteTeamMember` без `writeData`** — `splice` вырезал только из памяти,
+   файл не перезаписан → после рестарта «удалённый» возвращается. Удаление
+   фактически не работало. (Критический баг.)
+2. **Пропала валидация `name`** — при правках по `telegram` случайно удалил
+   блок проверки `name`; можно было создать сотрудника без имени.
+3. **`id` приходит в сервис уже числом** — преобразование `"2"→2` и проверку
+   `NaN` делает маршрут; сервис остаётся «чистым» от HTTP → легко тестировать.
+4. **update — компромисс:** `name`/`position` обязательны, `photo`/`vk`
+   опциональны (через `??` сохраняем старое). Строго REST PUT = полная замена,
+   но для админки «досыл изменений» дружелюбнее.
+
+---
+
+## Этап 3.4 — маршруты в `server.js`
+
+### Шаблон маршрута-мутации
+
+```js
+app.put('/api/hero', async (req, res) => {
+    try {
+        const updated = await updateHero(req.body);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('PUT /api/hero:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+```
+
+Сердце обработки ошибок (в каждом `catch`):
+- **`err.status || 500`** — наши ошибки несут `status` (400/404); у прочих
+  (файл, баг) поля нет → `500`. Так одно `catch` различает «вина клиента/сервера».
+- **`err.status ? err.message : 'Внутренняя ошибка сервера'`** — для серверных
+  ошибок НЕ показываем `err.message` (утечка внутренних деталей).
+- **`err.message`** — текст, переданный в `new Error(текст)`.
+
+### `:id`-маршруты
+
+```js
+const id = Number(req.params.id);
+if (Number.isNaN(id)) {
+    return res.status(400).json({ success: false, message: 'id должен быть числом' });
+}
+```
+- **`Number(req.params.id)`** — строка → число (`"2"`→`2`).
+- **`Number.isNaN(id)`** — `/api/team/abc` → `Number('abc')` = `NaN` → `400`.
+  (`id === NaN` всегда `false`, так нельзя — только `Number.isNaN`.)
+- **`return`** перед `res.status(400)` обязателен! Иначе код пойдёт дальше,
+  ответит второй раз → «Cannot set headers after they are sent».
+
+### 4 маршрута
+`PUT /api/hero` (200), `POST /api/team` (**201** — создание),
+`PUT /api/team/:id` (200), `DELETE /api/team/:id` (200). Порядок в файле:
+статика → GET → мутации → `app.listen` (всегда последним).
+
+### Долг (отметить на День 5)
+`catch` дублируется в 5 маршрутах. Можно убрать через **error-handling
+middleware** Express (`(err, req, res, next)`) — отрефакторим, когда будем
+причёсывать единый формат ошибок для команды.
+
+---
+
+## Этап 3.6 — дымовой прогон (curl)
+
+Подняли сервер, прогнали все маршруты. **Перед прогоном — бэкап
+`data/data.json`** (тесты добавляют/удаляют записи), после — восстановили.
+
+| Кейс | Ожидали | Получили |
+|---|---|---|
+| POST валидный | 201, id=4, дефолты `photo:""`/`vk:"#"` | ✅ |
+| POST без name | 400 | ✅ |
+| PUT /id / PUT /999 / PUT /abc | 200 / 404 / 400 | ✅ |
+| DELETE /id / DELETE /999 | 200 / 404 | ✅ |
+| PUT hero валид / пустой title | 200 / 400 | ✅ |
+
+### Грабли 3.6 — кодировка терминала
+
+- **«Кракозябры» в ответах curl** (`ϸ�� ������`) — артефакт отображения:
+  curl отдаёт UTF-8, консоль Windows показывает в cp866. Данные целы.
+- **Ложная «порча» при inline-кириллице**: `curl -d '{"name":"Анна"}'` через
+  Bash на Windows может прогнать тело через не-UTF-8 кодовую страницу →
+  в файл лягут `U+FFFD`. Это вина **терминала**, не сервера: при отправке
+  тела из `.json`-файла (`curl --data @file.json`) кириллица сохраняется
+  корректно (проверено по код-поинтам: `1040 1085 ...` = «Анна»).
+- **Вывод:** реальная админка Ивана (браузер → UTF-8) работает правильно.
+  Для ручного теста слать тело из файла, не inline-строкой.
+- **Поймал ещё:** curl сначала бил в **старый** сервер Дня 2 (только GET) —
+  висел незакрытый процесс. Лечение: `taskkill //F //IM node.exe`, проверка
+  порта `netstat -ano | grep :3000`, рестарт.
+
+---
+
+## Этап 3.5 — автотесты (`node --test`)
+
+### Юнит-тест и `node:test`
+
+**Юнит-тест** — программа, вызывающая один кусок кода с известным входом и
+проверяющая выход. Ловит регрессии сами, документирует поведение, даёт
+уверенность при рефакторинге. Используем **встроенный** раннер (без jest/mocha):
+```js
+const test = require('node:test');     // test(имя, fn)
+const assert = require('node:assert'); // проверки
+```
+- **`test('имя', () => {...})`** — описывает тест; если внутри ничего не
+  «бросило» — пройден (✓), иначе провален (✗).
+- **`assert.strictEqual(actual, expected)`** — проверка `===`.
+  (`deepStrictEqual` — для объектов/массивов «по содержимому».)
+- **async-тест + `assert.rejects(fn, проверка)`** — ждёт, что Promise из
+  `fn()` упадёт; вторым аргументом проверяем ошибку:
+  ```js
+  await assert.rejects(() => addTeamMember({ position: 'dev' }),
+                       (err) => err.status === 400);
+  ```
+
+### Тонкость: тесты не должны портить `data.json`
+
+`addTeamMember` с **валидными** данными перезапишет боевой файл. Поэтому на
+Дне 3 тестируем только то, что файла **не трогает**:
+1. **`getNextId`** — чистая функция (4 кейса).
+2. **Пути валидации** — при плохом вводе функция бросает **до** `readData()`
+   (порядок: сначала `validateTeamMember`, потом чтение). Безопасно (4 кейса).
+
+Полные тесты с записью требуют **изоляции хранилища** (временный файл вместо
+боевого) — отдельная техника, отложили на День 4/5.
+
+### Где лежат / как запускать
+
+`node --test` (наш `npm test`) сам находит файлы в папке **`test/`** и/или с
+именами `*.test.js`. Положили в `test/dataService.test.js` (оба условия).
+`require('../src/dataService')` — `..` т.к. тест в `test/`, сервис в `src/`.
+
+### Результат
+
+```
+# tests 8   # pass 8   # fail 0
+```
+Формат вывода — **TAP** (Test Anything Protocol): `ok N - имя` = пройден,
+`not ok N` = провален. Код возврата `npm test`: `0` при зелёных, не-`0` при
+красных (пригодится для CI на GitHub). Проверили: прогон тестов `data.json`
+не изменил (`git diff` — только удаление `telegram`).
+
+---
+
+## Итоги Дня 3
+
+### Что получилось
+
+```
+Nikita/
+├── server.js                  ← +4 маршрута мутаций (hero, team CRUD)
+├── src/
+│   ├── storage.js             ← без изменений
+│   └── dataService.js         ← НОВЫЙ: getNextId, updateHero, CRUD team, валидация
+├── data/data.json             ← убрали telegram (контракт изменён командой)
+└── test/
+    └── dataService.test.js    ← НОВЫЙ: 8 автотестов
+```
+
+Появился **второй слой** (`dataService`). API: `GET /api/data`,
+`PUT /api/hero`, `POST/PUT/DELETE /api/team[/:id]`. `npm test` — 8 зелёных.
+
+### Концепции, которые освоил
+
+| Категория | Что |
+|---|---|
+| HTTP/REST | POST/PUT/DELETE, ресурс vs метод, `req.body`, `req.params.id` (строка!), коды 201/400/404, 4xx vs 5xx |
+| JavaScript | `.map`/`.find`/`.findIndex`/`.push`/`.splice`, spread `...` (массив и объект), `??` vs `\|\|`, `Number()`/`Number.isNaN()`, `Array.isArray`, `typeof null === 'object'`, `.trim()`, деструктуризация `const [x] =` |
+| Ошибки | `new Error(msg)` + кастомное `.status`, `throw`, маппинг `err.status\|\|500` |
+| Архитектура | controller→service→repository, валидация в сервисе, «низкий слой бросает — верхний решает», пересборка объекта из проверенных полей |
+| Express | `app.post/put/delete`, `:id` в пути, `return res...` (двойной ответ), `201`, `express.json()` → `req.body` |
+| Тесты | юнит-тест, `node:test`, `assert.strictEqual`/`assert.rejects`, async-тесты, TAP, изоляция от боевых данных |
+| Инструменты | `curl -X/-d/--data @file`, `taskkill`, `netstat`, код-поинты для проверки UTF-8, бэкап перед прогоном |
+
+### Грабли, которые поймал
+
+1. `deleteTeamMember` без `writeData` — удаление не сохранялось (критич.).
+2. Случайно удалённая валидация `name` при правке `telegram`.
+3. `req.params.id` — строка; без `Number()` сравнение `===` с числовым id не
+   срабатывает.
+4. Забыть `return` перед ранним `res.status(400)` → двойной ответ.
+5. curl бил в старый незакрытый сервер (только GET) → 404 на новые маршруты.
+6. Ложная «порча» кириллицы из-за кодировки терминала (не сервера).
+7. `telegram` в `data.json` сохранялся бы через spread при update, пока не
+   почистили данные.
+
+### Что НЕ сделано — задачи на дальше
+
+- **День 4:** CRUD `vacancies` и `benefits`, их маршруты и тесты.
+- **Долг по тестам:** тесты на успешный CRUD с записью (изоляция хранилища —
+  временный файл).
+- **Долг по коду:** убрать дублирование `catch` через error-handling
+  middleware (День 5).
+- **День 5:** интеграция с Егором/Иваном, единый формат ошибок.
+- **День 6:** `README.md`, `.gitattributes` (CRLF), финал, GitHub.
+
+### Ключевая мысль Дня 3
+
+Добавили средний слой — **бизнес-логику** (`dataService`): валидация, `id`,
+CRUD. Теперь обязанности чётко разделены: `server.js` переводит HTTP ↔ вызовы
+сервиса, `dataService` знает правила предметной области, `storage` читает/пишет
+файл. Ошибки несут `.status`, и маршрут единообразно превращает их в HTTP-коды.
+Чистую логику (`getNextId`, валидацию) закрыли автотестами — теперь регрессии
+ловятся сами.
+
+---
