@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadSiteData() {
-  const response = await fetch('/api/data.json');
+  const response = await fetch('/api/data');
 
   if (!response.ok) {
     throw new Error('Не удалось загрузить данные сайта');
