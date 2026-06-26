@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { getNextId, addTeamMember, updateHero } = require('../src/dataService');
+const { getNextId, addTeamMember, updateHero, addVacancy, addBenefit } = require('../src/dataService');
 
 test('getNextId: пустой массив -> 1', () => {
     assert.strictEqual(getNextId([]), 1);
@@ -42,6 +42,41 @@ test('updateHero: пустой title -> ошибка 400', async () => {
 test('updateHero: stats не массив -> ошибка 400', async () => {
     await assert.rejects(
         () => updateHero({ title: 'Заголовок', stats: 'не массив' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addVacancy: без title -> 400', async () => {
+    await assert.rejects(
+        () => addVacancy({ format: 'удаленно', url: 'https://hh.ru' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addVacancy: url без протокола (hh.ru) -> 400', async () => {
+    await assert.rejects(
+        () => addVacancy({ title: 'Dev', format: 'удаленно', url: 'hh.ru/vacancy/1' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addVacancy: url не ссылка (мусор) -> 400', async () => {
+    await assert.rejects(
+        () => addVacancy({ title: 'Dev', format: 'удаленно', url: 'просто текст' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addBenefit: без description -> 400', async () => {
+    await assert.rejects(
+        () => addBenefit({ title: 'Спорт' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addBenefit: description из пробелов -> 400', async () => {
+    await assert.rejects(
+        () => addBenefit({ title: 'Спорт', description: '   ' }),
         (err) => err.status === 400
     );
 });

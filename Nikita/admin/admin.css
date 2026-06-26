@@ -1,0 +1,447 @@
+:root {
+    --font-family: "Manrope", Verdana, sans-serif;
+
+    --bg: #f0f5ff;
+    --card-bg: #ffffff;
+    --border: #d3def4;
+    --text: #12203b;
+    --muted: #7b88a1;
+    --primary: #507bce;
+    --primary-dark: #3c67ba;
+    --danger: #ff5151;
+    --danger-dark: #eb4836;
+    --success: #20a781;
+    --sidebar-bg: #12203b;
+    --sidebar-text: #a0b2d3;
+    --sidebar-text-strong: #ffffff;
+    --sidebar-hover: #18253d;
+    --radius: 12px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+}
+
+/* ── Сайдбар ─────────────────────────────────────────── */
+
+.sidebar {
+    background: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    padding: 20px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 20px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 14px;
+}
+
+.sidebar-logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--primary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 18px;
+}
+
+.sidebar-logo-title {
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--sidebar-text-strong);
+    line-height: 1.2;
+}
+
+.sidebar-logo-sub {
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 11px;
+    color: var(--sidebar-text);
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 8px;
+}
+
+.nav-group-label {
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--sidebar-text);
+    opacity: 0.65;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 14px 12px 6px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--sidebar-text);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+
+.nav-item:hover {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-text-strong);
+}
+
+.nav-item.active {
+    background: var(--primary);
+    color: #fff;
+}
+
+.nav-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* ── Main ────────────────────────────────────────────── */
+
+.main {
+    padding: 24px 28px;
+    min-width: 0;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    margin-bottom: 16px;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.breadcrumb-current {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.breadcrumb-sep {
+    color: var(--muted);
+    opacity: 0.6;
+}
+
+.status {
+    min-height: 22px;
+    margin: 0;
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.status.success {
+    color: var(--success);
+}
+
+.status.error {
+    color: var(--danger);
+}
+
+/* ── Stat-карточки ───────────────────────────────────── */
+
+.stat-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+}
+
+.stat-card--accent {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, #ffffff 0%, #eef3fb 100%);
+}
+
+.stat-label {
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+}
+
+/* ── Блоки контента ─────────────────────────────────── */
+
+.block {
+    display: none;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+}
+
+.block.active {
+    display: block;
+}
+
+.section-title {
+    margin: 0 0 18px;
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.subsection-title {
+    margin: 20px 0 10px;
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.hero-field {
+    margin-bottom: 12px;
+}
+
+.field-label {
+    display: block;
+    margin: 10px 0 4px;
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.field-input {
+    width: 100%;
+    padding: 10px 12px;
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(80, 123, 206, 0.18);
+}
+
+textarea.field-input {
+    resize: vertical;
+    min-height: 80px;
+    font-family: "Manrope", Verdana, sans-serif;
+}
+
+.stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.stats-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.stats-value {
+    flex: 0 0 160px;
+}
+
+.stats-label {
+    flex: 1;
+}
+
+.cards-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-bottom: 16px;
+}
+
+.card {
+    flex: 1 1 320px;
+    max-width: 360px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: #fcfdff;
+}
+
+.card-title {
+    margin: 0 0 10px;
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 15px;
+    color: var(--muted);
+}
+
+.card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.section-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+/* ── Кнопки ─────────────────────────────────────────── */
+
+.btn {
+    padding: 10px 18px;
+    font-family: "Manrope", Verdana, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.btn:hover {
+    background: #eef3fb;
+}
+
+.btn.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.btn.primary:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn.danger {
+    background: #fff;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.btn.danger:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn.add {
+    border-style: dashed;
+    border-color: var(--primary);
+    color: var(--primary);
+    background: #fff;
+}
+
+.btn.add:hover {
+    background: #eef3fb;
+}
+
+.admin-footer {
+    margin-top: 24px;
+    padding: 8px 4px;
+    font-family: "Manrope", Verdana, sans-serif;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* ── Адаптив ────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        position: static;
+        height: auto;
+    }
+
+    .stat-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .card {
+        max-width: 100%;
+    }
+
+    .stats-row {
+        flex-wrap: wrap;
+    }
+
+    .stats-value {
+        flex: 1 1 100%;
+    }
+
+    .stat-cards {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 318 477" width="318" height="477" role="img" aria-label="Нет фото">
+  <rect width="318" height="477" fill="#e8edf2"/>
+  <circle cx="159" cy="186" r="64" fill="#b8c6d6"/>
+  <path d="M159 268c-66 0-119 44-119 99v110h238V367c0-55-53-99-119-99z" fill="#b8c6d6"/>
+  <text x="159" y="452" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#7d8fa0">Нет фото</text>
+</svg>

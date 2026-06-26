@@ -91,7 +91,125 @@ async function deleteTeamMember(id) {
     return removed;
 }
 
+function validateVacancy(vacancy) {
+    if (!vacancy || typeof vacancy !== 'object') {
+        throw validationError('Тело запроса должно быть объектом вакансии');
+    }
+    if (typeof vacancy.title !== 'string' || vacancy.title.trim() === '') {
+        throw validationError('Поле title обязательно и должно быть непустой строкой');
+    }
+    if (typeof vacancy.format !== 'string' || vacancy.format.trim() === '') {
+        throw validationError('Поле format обязательно и должно быть непустой строкой');
+    }
+    if (typeof vacancy.url !== 'string' || vacancy.url.trim() === '') {
+        throw validationError('Поле url обязательно и должно быть непустой строкой');
+    }
+    try {
+        new URL(vacancy.url);
+    } catch {
+        throw validationError('Поле url должно быть корректной ссылкой (например, https://hh.ru/...)');
+    }
+}
+
+async function addVacancy(vacancy) {
+    validateVacancy(vacancy);
+    const data = await readData();
+    const newVacancy = {
+        id: getNextId(data.vacancies),
+        title: vacancy.title,
+        format: vacancy.format,
+        url: vacancy.url,
+    };
+    data.vacancies.push(newVacancy);
+    await writeData(data);
+    return newVacancy;
+}
+
+async function updateVacancy(id, vacancy) {
+    validateVacancy(vacancy);
+    const data = await readData();
+    const index = data.vacancies.findIndex(v => v.id === id);
+    if (index === -1) {
+        throw notFoundError(`Вакансия с id=${id} не найдена`);
+    }
+    const updated = {
+        ...data.vacancies[index],
+        title: vacancy.title,
+        format: vacancy.format,
+        url: vacancy.url,
+    };
+    data.vacancies[index] = updated;
+    await writeData(data);
+    return updated;
+}
+
+async function deleteVacancy(id) {
+    const data = await readData();
+    const index = data.vacancies.findIndex(v => v.id === id);
+    if (index === -1) {
+        throw notFoundError(`Вакансия с id=${id} не найдена`);
+    }
+    const [removed] = data.vacancies.splice(index, 1);
+    await writeData(data);
+    return removed;
+}
+
+function validateBenefit(benefit) {
+    if (!benefit || typeof benefit !== 'object') {
+        throw validationError('Тело запроса должно быть объектом бонуса');
+    }
+    if (typeof benefit.title !== 'string' || benefit.title.trim() === '') {
+        throw validationError('Поле title обязательно и должно быть непустой строкой');
+    }
+    if (typeof benefit.description !== 'string' || benefit.description.trim() === '') {
+        throw validationError('Поле description обязательно и должно быть непустой строкой');
+    }
+}
+
+async function addBenefit(benefit) {
+    validateBenefit(benefit);
+    const data = await readData();
+    const newBenefit = {
+        id: getNextId(data.benefits),
+        title: benefit.title,
+        description: benefit.description,
+    };
+    data.benefits.push(newBenefit);
+    await writeData(data);
+    return newBenefit;
+}
+
+async function updateBenefit(id, benefit) {
+    validateBenefit(benefit);
+    const data = await readData();
+    const index = data.benefits.findIndex(b => b.id === id);
+    if (index === -1) {
+        throw notFoundError(`Бонус с id=${id} не найден`);
+    }
+    const updated = {
+        ...data.benefits[index],
+        title: benefit.title,
+        description: benefit.description,
+    };
+    data.benefits[index] = updated;
+    await writeData(data);
+    return updated;
+}
+
+async function deleteBenefit(id) {
+    const data = await readData();
+    const index = data.benefits.findIndex(b => b.id === id);
+    if (index === -1) {
+        throw notFoundError(`Бонус с id=${id} не найден`);
+    }
+    const [removed] = data.benefits.splice(index, 1);
+    await writeData(data);
+    return removed;
+}
+
 module.exports = {
     getNextId, updateHero, validationError, notFoundError,
     addTeamMember, updateTeamMember, deleteTeamMember,
+    addVacancy, updateVacancy, deleteVacancy,
+    addBenefit, updateBenefit, deleteBenefit
 };
