@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadSiteData() {
-  const response = await fetch('/api/data');
+  const response = await fetch('/api/data.json');
 
   if (!response.ok) {
     throw new Error('Не удалось загрузить данные сайта');
@@ -24,6 +24,7 @@ async function loadSiteData() {
 function renderHero(hero) {
   const titleElement = document.querySelector('.hero__title');
   const statsList = document.querySelector('.advantages__list');
+  //const statsTitle = document.querySelector('.advantages__title');
 
   if (!hero || !titleElement || !statsList) {
     return;
@@ -44,9 +45,29 @@ function renderHero(hero) {
 
   if (!Array.isArray(hero.stats)) {
     return;
-  }
-
+  } 
+    
+  //statsTitle.innerHTML = '';
   statsList.innerHTML = '';
+
+  hero.stats.forEach((stat) => {
+    //const itemTitle = document.createElement('span');
+    const item = document.createElement('li');
+    const value = document.createElement('span');
+
+    //itemTitle.className = 'advantages__title-part';
+    item.className = 'advantages__item';
+    value.className = 'advantages__item-title';
+
+    value.textContent = stat.value || '';
+
+    item.appendChild(value);
+    //itemTitle.appendChild(value);
+    item.appendChild(document.createTextNode(stat.label || ''));
+
+    //statsTitle.appendChild(itemTitle);
+    statsList.appendChild(item);
+  });
 
   hero.stats.forEach((stat) => {
     const item = document.createElement('li');
