@@ -13,32 +13,28 @@
       "name": "Алексей Герасимович",
       "position": "СТО",
       "photo": "upload/resize_cache/iblock/d45/318_477_1619711fa078991f0a23d032687646b21/zjpczcqzikerwej1coy74ti6y7sb0y9d.png",
-      "vk": "#",
-      "telegram": "#"
+      "vk": "https://vk.com/"
     },
     {
       "id": 2,
       "name": "Юрий Костин",
       "position": "СРО ЧНО",
       "photo": "upload/resize_cache/iblock/576/336_454_1619711fa078991f0a23d032687646b21/rsx07xrge1cz7ql0gw8j4ao3fca0z7x0.png",
-      "vk": "#",
-      "telegram": "#"
+      "vk": "#"
     },
     {
       "id": 3,
       "name": "Ваня Потехихихихин",
       "position": "старший руководитель проектов",
       "photo": "upload/resize_cache/iblock/44a/318_477_1619711fa078991f0a23d032687646b21/72mm50028lx702598mu3o564qcbtlxn4.png",
-      "vk": "#",
-      "telegram": "#"
+      "vk": "#"
     },
     {
       "id": 4,
       "name": "Ноунейм",
       "position": "старший руководитель проекторов",
       "photo": "upload/resize_cache/iblock/44a/318_477_1619711fa078991f0a23d032687646b21/72mm50028lx702598mu3o564qcbtlxn4.png",
-      "vk": "#",
-      "telegram": "#"
+      "vk": "#"
     }
   ],
   "vacancies": [

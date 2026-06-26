@@ -1982,9 +1982,31 @@ ul {
     object-fit: cover
 }
 
+.team__item-vk-logo {
+    display: none;
+    aspect-ratio: 1/1;
+    height: 40px;
+    width: auto;
+    opacity: 1;
+    position: absolute;
+    top: 15px;
+    right: 15px
+}
+
+.active {
+    display: block
+}
+
+.inactive {
+    display: none
+}
+
 @media (max-width:1600px) {
     .team__item-image {
         height: 370px
+    }
+    .team__item-vk-logo {
+        height: 35px
     }
 }
 
@@ -1992,11 +2014,17 @@ ul {
     .team__item-image {
         height: 396px
     }
+    .team__item-vk-logo {
+        height: 35px
+    }
 }
 
 @media (max-width:767px) {
     .team__item-image {
         height: 328px
+    }
+    .team__item-vk-logo {
+        height: 35px
     }
 }
 

@@ -3,8 +3,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const data = await loadSiteData();
 
     renderHero(data.hero);
+    initAdvantagesTitleAnimation();
     renderTeam(data.team);
-    renderVacancies(data.vacancies);
+    initTeamVkLogoHover();
+    renderVacancies(data.vacancies); 
     renderBenefits(data.benefits);
   } catch (error) {
     console.error('Ошибка загрузки динамического контента:', error);
@@ -21,10 +23,59 @@ async function loadSiteData() {
   return response.json();
 }
 
+function initAdvantagesTitleAnimation() {
+  if (window.innerWidth < 992) {
+    return;
+  }
+
+  ScrollTrigger.getAll().forEach((trigger) => {
+    if (trigger.vars.id === 'advantages-title') {
+      trigger.kill();
+    }
+  });
+
+  const items = document.querySelectorAll('.advantages__item');
+  const parts = document.querySelectorAll('.advantages__title-part');
+
+  items.forEach((item, index) => {
+    const part = parts[index];
+
+    if (!part) {
+      return;
+    }
+
+    ScrollTrigger.create({
+      id: 'advantages-title',
+      trigger: item,
+      start: 'top center',
+      end: 'bottom center',
+      scrub: true,
+      onEnter: () => {
+        item.classList.add('advantages__item--active');
+        gsap.to(part, { autoAlpha: 1 });
+      },
+      onLeave: () => {
+        item.classList.remove('advantages__item--active');
+        gsap.to(part, { autoAlpha: 0 });
+      },
+      onEnterBack: () => {
+        item.classList.add('advantages__item--active');
+        gsap.to(part, { autoAlpha: 1 });
+      },
+      onLeaveBack: () => {
+        item.classList.remove('advantages__item--active');
+        gsap.to(part, { autoAlpha: 0 });
+      }
+    });
+  });
+
+  ScrollTrigger.refresh();
+}
+
 function renderHero(hero) {
   const titleElement = document.querySelector('.hero__title');
   const statsList = document.querySelector('.advantages__list');
-  //const statsTitle = document.querySelector('.advantages__title');
+  const statsTitle = document.querySelector('.advantages__title');
 
   if (!hero || !titleElement || !statsList) {
     return;
@@ -45,43 +96,50 @@ function renderHero(hero) {
 
   if (!Array.isArray(hero.stats)) {
     return;
-  } 
-    
-  //statsTitle.innerHTML = '';
+  }
+
+  statsTitle.innerHTML = '';
   statsList.innerHTML = '';
 
   hero.stats.forEach((stat) => {
-    //const itemTitle = document.createElement('span');
+    const itemTitle = document.createElement('span');
     const item = document.createElement('li');
     const value = document.createElement('span');
 
-    //itemTitle.className = 'advantages__title-part';
+    itemTitle.className = 'advantages__title-part';
     item.className = 'advantages__item';
     value.className = 'advantages__item-title';
 
     value.textContent = stat.value || '';
+    itemTitle.textContent = stat.value || '';
 
     item.appendChild(value);
-    //itemTitle.appendChild(value);
     item.appendChild(document.createTextNode(stat.label || ''));
 
-    //statsTitle.appendChild(itemTitle);
+    statsTitle.appendChild(itemTitle);
     statsList.appendChild(item);
   });
+}
 
-  hero.stats.forEach((stat) => {
-    const item = document.createElement('li');
-    const value = document.createElement('span');
+function initTeamVkLogoHover() {
+  const elements = document.querySelectorAll('.team__item-card');
 
-    item.className = 'advantages__item';
-    value.className = 'advantages__item-title';
+  elements.forEach((el) => {
+    const vkLogo = el.querySelector('.team__item-vk-logo');
 
-    value.textContent = stat.value || '';
+    if (!vkLogo) {
+      return;
+    }
 
-    item.appendChild(value);
-    item.appendChild(document.createTextNode(stat.label || ''));
+    el.addEventListener('mouseenter', () => {
+      vkLogo.classList.add('active');
+      vkLogo.classList.remove('inactive');
+    });
 
-    statsList.appendChild(item);
+    el.addEventListener('mouseleave', () => {
+      vkLogo.classList.add('inactive');
+      vkLogo.classList.remove('active');
+    });
   });
 }
 
@@ -115,6 +173,17 @@ function createTeamCard(member) {
           decoding="async"
           loading="lazy"
         >
+        <a href="${member.vk || '#'}" target="_blank" rel="noopener noreferrer">
+        <img
+          src="upload/vk-logo.png"
+          class="team__item-vk-logo"
+          alt="vk-logo"
+          width="50"
+          height="50"
+          decoding="async"
+          loading="lazy"
+        >
+        </a>
       </picture>
 
       <div class="card__description">
@@ -124,9 +193,6 @@ function createTeamCard(member) {
         <ul class="team__item-socials">
           <li>
             <a href="${member.vk || '#'}" target="_blank" rel="noopener noreferrer">VK</a>
-          </li>
-          <li>
-            <a href="${member.telegram || '#'}" target="_blank" rel="noopener noreferrer">TG</a>
           </li>
         </ul>
       </div>
