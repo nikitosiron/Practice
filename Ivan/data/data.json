@@ -13,6 +13,10 @@
       {
         "value": "dwdw",
         "label": "dwdw"
+      },
+      {
+        "value": "првиет",
+        "label": "тест"
       }
     ]
   },
@@ -43,6 +47,13 @@
       "name": "nikitosiron",
       "position": "ceo",
       "photo": "eweqdeqwd",
+      "vk": "#"
+    },
+    {
+      "id": 6,
+      "name": "прием",
+      "position": "сео",
+      "photo": "аууау",
       "vk": "#"
     }
   ],
