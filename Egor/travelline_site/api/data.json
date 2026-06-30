@@ -37,6 +37,38 @@
       "vk": "#"
     }
   ],
+  "platform": [
+    {
+      "id": 1,
+      "type": 3,
+      "year": "2020",
+      "mark": "upload/marks/billing.svg",
+      "title": "Платформа для управления проектами",
+      "subtitle": "Поддержка и развитие",
+      "strategy": "стратегия 1",
+      "text": "Описание платформы 1"
+    },
+    {
+      "id": 1,
+      "type": 3,
+      "year": "2020",
+      "mark": "upload/marks/billing.svg",
+      "title": "Платформа для управления проектами",
+      "subtitle": "Поддержка и развитие",
+      "strategy": "стратегия 1",
+      "text": "Описание платформы 1"
+    },
+    {
+      "id": 1,
+      "type": 3,
+      "year": "2020",
+      "mark": "upload/marks/billing.svg",
+      "title": "Платформа для управления проектами",
+      "subtitle": "Поддержка и развитие",
+      "strategy": "стратегия 1",
+      "text": "Описание платформы 1"
+    }
+  ],
   "vacancies": [
     {
       "id": 1,
