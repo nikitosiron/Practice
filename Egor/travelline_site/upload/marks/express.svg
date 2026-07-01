@@ -1,0 +1,5 @@
+<svg class="icon-block__img" xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" fill="none">
+  <rect x="2" y="2" width="40" height="40" rx="7" stroke="white" stroke-width="3" stroke-linejoin="round" />
+  <path d="M22.2965 20.8889H30.8891L19.0373 33.1111L21.7039 23.1111H13.1113L24.9632 10.8889L22.2965 20.8889Z" fill="white" />
+  <path d="M22.2696 20.8889H30.8891L19.0373 33.1111L22.0002 22L24.9632 10.8889L13.1113 23.1111H21.7309" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

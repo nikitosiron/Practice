@@ -2474,7 +2474,7 @@ ul {
 
 @media (max-width:1325px) {
     .platform-chart__col:nth-child(1) {
-        display: none
+        display: flex
     }
 }
 
