@@ -213,140 +213,6 @@ async function deleteBenefit(id) {
     return removed;
 }
 
-function validateGalleryItem(item) {
-    if (!item || typeof item !== 'object') {
-        throw validationError('Тело запроса должно быть объектом карточки галереи');
-    }
-    if (typeof item.image !== 'string' || item.image.trim() === '') {
-        throw validationError('Поле image обязательно и должно быть непустой строкой');
-    }
-    if (typeof item.caption !== 'string' || item.caption.trim() === '') {
-        throw validationError('Поле caption обязательно и должно быть непустой строкой');
-    }
-}
-
-async function addGalleryItem(item) {
-    validateGalleryItem(item);
-    const data = await readData();
-    const newItem = {
-        id: getNextId(data.gallery),
-        image: item.image,
-        caption: item.caption,
-        active: item.active !== false
-    };
-    data.gallery.push(newItem);
-    await writeData(data);
-    return newItem;
-}
-
-async function updateGalleryItem(id, item) {
-    validateGalleryItem(item);
-    const data = await readData();
-    const index = data.gallery.findIndex(g => g.id === id);
-    if (index === -1) {
-        throw notFoundError(`Карточка галереи с id=${id} не найдена`);
-    }
-    const updated = {
-        ...data.gallery[index],
-        image: item.image,
-        caption: item.caption,
-        active: item.active !== false
-    };
-    data.gallery[index] = updated;
-    await writeData(data);
-    return updated;
-}
-
-async function deleteGalleryItem(id) {
-    const data = await readData();
-    const index = data.gallery.findIndex(g => g.id === id);
-    if (index === -1) {
-        throw notFoundError(`Карточка галереи с id=${id} не найдена`);
-    }
-    const [removed] = data.gallery.splice(index, 1);
-    await writeData(data);
-    return removed;
-}
-
-const ALLOWED_TIMELINE_CATEGORIES = ['B2B', 'B2C', 'B2E'];
-
-function validateTimelineItem(item) {
-    if (!item || typeof item !== 'object') {
-        throw validationError('Тело запроса должно быть объектом записи таймлайна');
-    }
-    if (typeof item.name !== 'string' || item.name.trim() === '') {
-        throw validationError('Поле name обязательно и должно быть непустой строкой');
-    }
-    if (typeof item.year !== 'number' || !Number.isInteger(item.year)
-        || item.year < 1990 || item.year > 2100) {
-        throw validationError('Поле year должно быть целым числом от 1990 до 2100');
-    }
-    if (typeof item.category !== 'string') {
-        throw validationError('Поле category должно быть строкой');
-    }
-    if (!ALLOWED_TIMELINE_CATEGORIES.includes(item.category)) {
-        throw validationError('Поле category должно быть одним из: B2B, B2C, B2E');
-    }
-    if (typeof item.subtitle !== 'string' || item.subtitle.trim() === '') {
-        throw validationError('Поле subtitle обязательно и должно быть непустой строкой');
-    }
-    if (typeof item.description !== 'string' || item.description.trim() === '') {
-        throw validationError('Поле description обязательно и должно быть непустой строкой');
-    }
-}
-
-async function addTimelineItem(item) {
-    validateTimelineItem(item);
-    const data = await readData();
-    if (!data.timeline) data.timeline = [];
-    const newItem = {
-        id: getNextId(data.timeline),
-        year: item.year,
-        name: item.name,
-        category: item.category,
-        subtitle: item.subtitle,
-        description: item.description,
-        active: item.active !== false
-    };
-    data.timeline.push(newItem);
-    await writeData(data);
-    return newItem;
-}
-
-async function updateTimelineItem(id, item) {
-    validateTimelineItem(item);
-    const data = await readData();
-    if (!data.timeline) data.timeline = [];
-    const index = data.timeline.findIndex(t => t.id === id);
-    if (index === -1) {
-        throw notFoundError(`Запись таймлайна с id=${id} не найдена`);
-    }
-    const updated = {
-        ...data.timeline[index],
-        year: item.year,
-        name: item.name,
-        category: item.category,
-        subtitle: item.subtitle,
-        description: item.description,
-        active: item.active !== false
-    };
-    data.timeline[index] = updated;
-    await writeData(data);
-    return updated;
-}
-
-async function deleteTimelineItem(id) {
-    const data = await readData();
-    if (!data.timeline) data.timeline = [];
-    const index = data.timeline.findIndex(t => t.id === id);
-    if (index === -1) {
-        throw notFoundError(`Запись таймлайна с id=${id} не найдена`);
-    }
-    const [removed] = data.timeline.splice(index, 1);
-    await writeData(data);
-    return removed;
-}
-
 function validatePosition(position) {
     if (!position || typeof position !== 'object') {
         throw validationError('Тело запроса должно быть объектом должности');
@@ -407,13 +273,10 @@ async function deletePosition(id) {
     return removed;
 }
 
-
 module.exports = {
     getNextId, updateHero, validationError, notFoundError,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addVacancy, updateVacancy, deleteVacancy,
     addBenefit, updateBenefit, deleteBenefit,
-    addGalleryItem, updateGalleryItem, deleteGalleryItem,
-    addTimelineItem, updateTimelineItem, deleteTimelineItem,
     getPositions, addPosition, updatePosition, deletePosition
 };

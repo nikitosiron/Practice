@@ -6,8 +6,6 @@ const {
     addTeamMember, updateTeamMember, deleteTeamMember,
     addVacancy, updateVacancy, deleteVacancy,
     addBenefit, updateBenefit, deleteBenefit,
-    addGalleryItem, updateGalleryItem, deleteGalleryItem,
-    addTimelineItem, updateTimelineItem, deleteTimelineItem,
     addPosition, updatePosition, deletePosition,
 } = require('./src/dataService');
 
@@ -22,8 +20,6 @@ app.get('/api/data', async (req, res) => {
     try {
         const data = await readData();
         if (!data.positions) data.positions = [];
-        if (!data.gallery) data.gallery = [];
-        if (!data.timeline) data.timeline = [];
         res.json(data);
     } catch (err) {
         console.error('Ошибка чтения data.json:', err);
@@ -169,94 +165,6 @@ app.delete('/api/benefits/:id', async (req, res) => {
         res.json({ success: true, data: removed });
     } catch (err) {
         console.error('DELETE /api/benefits/:id:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.post('/api/gallery', async (req, res) => {
-    try {
-        const created = await addGalleryItem(req.body);
-        res.status(201).json({ success: true, data: created });
-    } catch (err) {
-        console.error('POST /api/gallery:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.put('/api/gallery/:id', async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (Number.isNaN(id)) { 
-            return res.status(400).json({ success: false, message: 'id должен быть числом' });
-        }
-        const updated = await updateGalleryItem(id, req.body);
-        res.json({ success: true, data: updated });
-    } catch (err) {
-        console.error('PUT /api/gallery/:id:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.delete('/api/gallery/:id', async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (Number.isNaN(id)) {
-            return res.status(400).json({ success: false, message: 'id должен быть числом' });
-        }
-        const removed = await deleteGalleryItem(id);
-        res.json({ success: true, data: removed });
-    } catch (err) {
-        console.error('DELETE /api/gallery/:id:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.post('/api/timeline', async (req, res) => {
-    try {
-        const created = await addTimelineItem(req.body);
-        res.status(201).json({ success: true, data: created });
-    } catch (err) {
-        console.error('POST /api/timeline:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.put('/api/timeline/:id', async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (Number.isNaN(id)) {
-            return res.status(400).json({ success: false, message: 'id должен быть числом' });
-        }
-        const updated = await updateTimelineItem(id, req.body);
-        res.json({ success: true, data: updated });
-    } catch (err) {
-        console.error('PUT /api/timeline/:id:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.delete('/api/timeline/:id', async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (Number.isNaN(id)) {
-            return res.status(400).json({ success: false, message: 'id должен быть числом' });
-        }
-        const removed = await deleteTimelineItem(id);
-        res.json({ success: true, data: removed });
-    } catch (err) {
-        console.error('DELETE /api/timeline/:id:', err);
         const status = err.status || 500;
         const message = err.status ? err.message : 'Внутренняя ошибка сервера';
         res.status(status).json({ success: false, message });
