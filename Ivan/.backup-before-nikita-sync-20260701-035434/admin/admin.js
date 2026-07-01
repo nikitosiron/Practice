@@ -31,7 +31,6 @@ function parseApiResponse(response) {
 var cachedPositions = [];
 var cachedTeam = [];
 var cachedVacancies = [];
-var cachedGallery = [];
 
 function loadData() {
     fetch('/api/data')
@@ -45,14 +44,12 @@ function loadData() {
             cachedPositions = data.positions || [];
             cachedTeam = data.team || [];
             cachedVacancies = data.vacancies || [];
-            cachedGallery = data.gallery || [];
 
             renderHeroForm(data.hero);
             renderTeam(cachedTeam);
             renderVacancies(cachedVacancies);
             renderBenefits(data.benefits);
             renderPositions(cachedPositions);
-            renderGallery(cachedGallery);
             updateStatCards(data);
             isDirty = false;
         })
@@ -68,8 +65,7 @@ var sectionLabels = {
     team: 'Сотрудники',
     positions: 'Должности',
     vacancies: 'Вакансии',
-    benefits: 'Плюшки',
-    gallery: 'Фотогалерея'
+    benefits: 'Плюшки'
 };
 
 function switchSection(name) {
@@ -597,7 +593,7 @@ function addTeamMember() {
     apiRequest('POST', '/api/team', {
         name: 'Новый сотрудник',
         position: cachedPositions.length > 0 ? cachedPositions[0].title : 'Должность',
-        photo: 'upload/placeholder-avatar.svg',
+        photo: '',
         vk: '#',
         active: true
     })
@@ -1009,100 +1005,6 @@ function deletePosition(id) {
         });
 }
 
-// ─── Фотогалерея ────────────────────────────────────────────
-// Блок 7 из ТЗ практики ("жизнь компании"). Поля item.image и
-// item.text — контракт, зафиксированный публичной страницей Егора
-// (dynamic-content.js: renderGallery/createGalleryImage читают
-// именно эти два поля). Серверные роуты /api/gallery ещё не
-// реализованы (зона участника 3) — до тех пор запросы будут падать
-// с ошибкой, но контракт уже согласован со всеми тремя частями.
-
-function renderGallery(gallery) {
-    var list = document.querySelector('#gallery-list');
-    list.innerHTML = '';
-    for (var i = 0; i < gallery.length; i++) {
-        list.appendChild(buildGalleryCard(gallery[i], i + 1));
-    }
-}
-
-function buildGalleryCard(item, index) {
-    var card = document.createElement('div');
-    card.className = 'card gallery__item';
-    card.dataset.id = item.id;
-
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Фото #' + index;
-    card.appendChild(title);
-
-    card.appendChild(buildField('Путь к изображению', 'gallery__item-image', item.image));
-    card.appendChild(buildField('Подпись к фото', 'gallery__item-text', item.text));
-
-    card.appendChild(buildCardActions(
-        function () { saveGalleryItem(item.id, card); },
-        function () { deleteGalleryItem(item.id); }
-    ));
-    return card;
-}
-
-function collectGalleryData(card) {
-    return {
-        image: card.querySelector('.gallery__item-image').value,
-        text: card.querySelector('.gallery__item-text').value
-    };
-}
-
-function saveGalleryItem(id, card) {
-    var data = collectGalleryData(card);
-
-    if (data.image.trim() === '' || data.text.trim() === '') {
-        showStatus('Заполните путь к изображению и подпись', 'error');
-        return;
-    }
-
-    apiRequest('PUT', '/api/gallery/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Фото сохранено');
-            isDirty = false;
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
-
-function addGalleryItem() {
-    apiRequest('POST', '/api/gallery', {
-        image: '',
-        text: 'Новая подпись'
-    })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Фото добавлено');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deleteGalleryItem(id) {
-    if (!confirm('Удалить фото?')) {
-        return;
-    }
-
-    apiRequest('DELETE', '/api/gallery/' + id)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Фото удалено');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
-        });
-}
-
 // ─── Утилиты ────────────────────────────────────────────────
 
 // Пути к фото сотрудников в data.json относительные ("upload/...") и
@@ -1134,7 +1036,6 @@ function wireStaticButtons() {
     document.querySelector('#vacancies-add').addEventListener('click', addVacancy);
     document.querySelector('#benefits-add').addEventListener('click', addBenefit);
     document.querySelector('#positions-add').addEventListener('click', addPosition);
-    document.querySelector('#gallery-add').addEventListener('click', addGalleryItem);
 }
 
 function wireViewToggle() {
