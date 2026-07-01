@@ -213,6 +213,61 @@ async function deleteBenefit(id) {
     return removed;
 }
 
+function validateGalleryItem(item) {
+    if (!item || typeof item !== 'object') {
+        throw validationError('Тело запроса должно быть объектом карточки галереи');
+    }
+    if (typeof item.image !== 'string' || item.image.trim() === '') {
+        throw validationError('Поле image обязательно и должно быть непустой строкой');
+    }
+    if (typeof item.caption !== 'string' || item.caption.trim() === '') {
+        throw validationError('Поле caption обязательно и должно быть непустой строкой');
+    }
+}
+
+async function addGalleryItem(item) {
+    validateGalleryItem(item);
+    const data = await readData();
+    const newItem = {
+        id: getNextId(data.gallery),
+        image: item.image,
+        caption: item.caption,
+        active: item.active !== false
+    };
+    data.gallery.push(newItem);
+    await writeData(data);
+    return newItem;
+}
+
+async function updateGalleryItem(id, item) {
+    validateGalleryItem(item);
+    const data = await readData();
+    const index = data.gallery.findIndex(g => g.id === id);
+    if (index === -1) {
+        throw notFoundError(`Карточка галереи с id=${id} не найдена`);
+    }
+    const updated = {
+        ...data.gallery[index],
+        image: item.image,
+        caption: item.caption,
+        active: item.active !== false
+    };
+    data.gallery[index] = updated;
+    await writeData(data);
+    return updated;
+}
+
+async function deleteGalleryItem(id) {
+    const data = await readData();
+    const index = data.gallery.findIndex(g => g.id === id);
+    if (index === -1) {
+        throw notFoundError(`Карточка галереи с id=${id} не найдена`);
+    }
+    const [removed] = data.gallery.splice(index, 1);
+    await writeData(data);
+    return removed;
+}
+
 function validatePosition(position) {
     if (!position || typeof position !== 'object') {
         throw validationError('Тело запроса должно быть объектом должности');
@@ -273,10 +328,12 @@ async function deletePosition(id) {
     return removed;
 }
 
+
 module.exports = {
     getNextId, updateHero, validationError, notFoundError,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addVacancy, updateVacancy, deleteVacancy,
     addBenefit, updateBenefit, deleteBenefit,
+    addGalleryItem, updateGalleryItem, deleteGalleryItem,
     getPositions, addPosition, updatePosition, deletePosition
 };
