@@ -27,6 +27,14 @@
       "photo": "upload/placeholder-avatar.svg",
       "vk": "#",
       "active": true
+    },
+    {
+      "id": 6,
+      "name": "Новый сотрудник",
+      "position": "СТО",
+      "photo": "",
+      "vk": "#",
+      "active": true
     }
   ],
   "vacancies": [
