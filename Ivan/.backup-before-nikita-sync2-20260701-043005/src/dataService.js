@@ -213,61 +213,6 @@ async function deleteBenefit(id) {
     return removed;
 }
 
-function validateGalleryItem(item) {
-    if (!item || typeof item !== 'object') {
-        throw validationError('Тело запроса должно быть объектом карточки галереи');
-    }
-    if (typeof item.image !== 'string' || item.image.trim() === '') {
-        throw validationError('Поле image обязательно и должно быть непустой строкой');
-    }
-    if (typeof item.caption !== 'string' || item.caption.trim() === '') {
-        throw validationError('Поле caption обязательно и должно быть непустой строкой');
-    }
-}
-
-async function addGalleryItem(item) {
-    validateGalleryItem(item);
-    const data = await readData();
-    const newItem = {
-        id: getNextId(data.gallery),
-        image: item.image,
-        caption: item.caption,
-        active: item.active !== false
-    };
-    data.gallery.push(newItem);
-    await writeData(data);
-    return newItem;
-}
-
-async function updateGalleryItem(id, item) {
-    validateGalleryItem(item);
-    const data = await readData();
-    const index = data.gallery.findIndex(g => g.id === id);
-    if (index === -1) {
-        throw notFoundError(`Карточка галереи с id=${id} не найдена`);
-    }
-    const updated = {
-        ...data.gallery[index],
-        image: item.image,
-        caption: item.caption,
-        active: item.active !== false
-    };
-    data.gallery[index] = updated;
-    await writeData(data);
-    return updated;
-}
-
-async function deleteGalleryItem(id) {
-    const data = await readData();
-    const index = data.gallery.findIndex(g => g.id === id);
-    if (index === -1) {
-        throw notFoundError(`Карточка галереи с id=${id} не найдена`);
-    }
-    const [removed] = data.gallery.splice(index, 1);
-    await writeData(data);
-    return removed;
-}
-
 function validatePosition(position) {
     if (!position || typeof position !== 'object') {
         throw validationError('Тело запроса должно быть объектом должности');
@@ -328,83 +273,10 @@ async function deletePosition(id) {
     return removed;
 }
 
-function validatePlatformItem(item) {
-    if (!item || typeof item !== 'object') {
-        throw validationError('Тело запроса должно быть объектом карточки платформы');
-    }
-    if (typeof item.year !== 'string' || item.year.trim() === '') {
-        throw validationError('Поле year обязательно и должно быть непустой строкой');
-    }
-    if (typeof item.title !== 'string' || item.title.trim() === '') {
-        throw validationError('Поле title обязательно и должно быть непустой строкой');
-    }
-    if (typeof item.text !== 'string' || item.text.trim() === '') {
-        throw validationError('Поле text обязательно и должно быть непустой строкой');
-    }
-}
-
-async function addPlatformItem(item) {
-    validatePlatformItem(item);
-    const data = await readData();
-    if (!data.platform) data.platform = [];
-    const newItem = {
-        id: getNextId(data.platform),
-        year: item.year,
-        title: item.title,
-        text: item.text,
-        subtitle: item.subtitle ?? '',
-        strategy: item.strategy ?? '',
-        mark: item.mark ?? '',
-        type: item.type ?? 1,
-        active: item.active !== false
-    };
-    data.platform.push(newItem);
-    await writeData(data);
-    return newItem;
-}
-
-async function updatePlatformItem(id, item) {
-    validatePlatformItem(item);
-    const data = await readData();
-    if (!data.platform) data.platform = [];
-    const index = data.platform.findIndex(p => p.id === id);
-    if (index === -1) {
-        throw notFoundError(`Карточка платформы с id=${id} не найдена`);
-    }
-    const updated = {
-        ...data.platform[index],
-        year: item.year,
-        title: item.title,
-        text: item.text,
-        subtitle: item.subtitle ?? data.platform[index].subtitle,
-        strategy: item.strategy ?? data.platform[index].strategy,
-        mark: item.mark ?? data.platform[index].mark,
-        type: item.type ?? data.platform[index].type,
-        active: item.active !== false
-    };
-    data.platform[index] = updated;
-    await writeData(data);
-    return updated;
-}
-
-async function deletePlatformItem(id) {
-    const data = await readData();
-    if (!data.platform) data.platform = [];
-    const index = data.platform.findIndex(p => p.id === id);
-    if (index === -1) {
-        throw notFoundError(`Карточка платформы с id=${id} не найдена`);
-    }
-    const [removed] = data.platform.splice(index, 1);
-    await writeData(data);
-    return removed;
-}
-
 module.exports = {
     getNextId, updateHero, validationError, notFoundError,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addVacancy, updateVacancy, deleteVacancy,
     addBenefit, updateBenefit, deleteBenefit,
-    addGalleryItem, updateGalleryItem, deleteGalleryItem,
-    getPositions, addPosition, updatePosition, deletePosition,
-    addPlatformItem, updatePlatformItem, deletePlatformItem
+    getPositions, addPosition, updatePosition, deletePosition
 };

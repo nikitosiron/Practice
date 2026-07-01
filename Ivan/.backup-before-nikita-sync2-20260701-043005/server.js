@@ -6,21 +6,13 @@ const {
     addTeamMember, updateTeamMember, deleteTeamMember,
     addVacancy, updateVacancy, deleteVacancy,
     addBenefit, updateBenefit, deleteBenefit,
-    addGalleryItem, updateGalleryItem, deleteGalleryItem,
     addPosition, updatePosition, deletePosition,
-    addPlatformItem, updatePlatformItem, deletePlatformItem,
 } = require('./src/dataService');
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-
-app.use('/api', (req, res, next) => {
-    res.set('Cache-Control', 'no-store');
-    next();
-});
-
 app.use(express.static(path.join(__dirname, 'travelline_site')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
@@ -28,8 +20,6 @@ app.get('/api/data', async (req, res) => {
     try {
         const data = await readData();
         if (!data.positions) data.positions = [];
-        if (!data.gallery) data.gallery = [];
-        if (!data.platform) data.platform = [];
         res.json(data);
     } catch (err) {
         console.error('Ошибка чтения data.json:', err);
@@ -181,50 +171,6 @@ app.delete('/api/benefits/:id', async (req, res) => {
     }
 });
 
-app.post('/api/gallery', async (req, res) => {
-    try {
-        const created = await addGalleryItem(req.body);
-        res.status(201).json({ success: true, data: created });
-    } catch (err) {
-        console.error('POST /api/gallery:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.put('/api/gallery/:id', async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (Number.isNaN(id)) {
-            return res.status(400).json({ success: false, message: 'id должен быть числом' });
-        }
-        const updated = await updateGalleryItem(id, req.body);
-        res.json({ success: true, data: updated });
-    } catch (err) {
-        console.error('PUT /api/gallery/:id:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.delete('/api/gallery/:id', async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (Number.isNaN(id)) {
-            return res.status(400).json({ success: false, message: 'id должен быть числом' });
-        }
-        const removed = await deleteGalleryItem(id);
-        res.json({ success: true, data: removed });
-    } catch (err) {
-        console.error('DELETE /api/gallery/:id:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
 app.get('/api/positions', async (req, res) => {
     try {
         const data = await readData();
@@ -273,50 +219,6 @@ app.delete('/api/positions/:id', async (req, res) => {
         res.json({ success: true, data: removed });
     } catch (err) {
         console.error('DELETE /api/positions/:id:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.post('/api/platform', async (req, res) => {
-    try {
-        const created = await addPlatformItem(req.body);
-        res.status(201).json({ success: true, data: created });
-    } catch (err) {
-        console.error('POST /api/platform:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.put('/api/platform/:id', async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (Number.isNaN(id)) {
-            return res.status(400).json({ success: false, message: 'id должен быть числом' });
-        }
-        const updated = await updatePlatformItem(id, req.body);
-        res.json({ success: true, data: updated });
-    } catch (err) {
-        console.error('PUT /api/platform/:id:', err);
-        const status = err.status || 500;
-        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
-        res.status(status).json({ success: false, message });
-    }
-});
-
-app.delete('/api/platform/:id', async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (Number.isNaN(id)) {
-            return res.status(400).json({ success: false, message: 'id должен быть числом' });
-        }
-        const removed = await deletePlatformItem(id);
-        res.json({ success: true, data: removed });
-    } catch (err) {
-        console.error('DELETE /api/platform/:id:', err);
         const status = err.status || 500;
         const message = err.status ? err.message : 'Внутренняя ошибка сервера';
         res.status(status).json({ success: false, message });

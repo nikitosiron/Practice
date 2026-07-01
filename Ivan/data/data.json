@@ -1,38 +1,135 @@
 {
   "hero": {
     "title": "Стабильно растем и принимаем новые вызовы TravelTech индустрии",
-    "stats": []
+    "stats": [
+      {
+        "value": "с 2008 года",
+        "label": "создаем инструменты для отельеров"
+      },
+      {
+        "value": "300+",
+        "label": "сотрудников в техотделе и более 700 в компании"
+      },
+      {
+        "value": "12 000+",
+        "label": "клиентов работают с нами"
+      },
+      {
+        "value": "топ-50",
+        "label": "в рейтинге работодателей hh.ru 2022-2024 гг."
+      },
+      {
+        "value": ">1,5 млн",
+        "label": "гостей в месяц бронируют через TravelLine"
+      },
+      {
+        "value": "300+",
+        "label": "интеграций со сторонними сервисами"
+      }
+    ]
   },
   "team": [
     {
-      "id": 1,
       "name": "Алексей Герасимов",
       "position": "СТО",
       "photo": "upload/resize_cache/iblock/d45/318_477_1619711fa078991f0a23d032687646b21/zjpczcqzikerwej1coy74ti6y7sb0y9d.png",
+      "id": 1,
       "vk": "#",
       "active": true
     },
     {
-      "id": 3,
+      "name": "Юра Костин",
+      "position": "СРО",
+      "photo": "upload/resize_cache/iblock/576/336_454_1619711fa078991f0a23d032687646b21/rsx07xrge1cz7ql0gw8j4ao3fca0z7x0.png",
+      "id": 2,
+      "vk": "#",
+      "active": true
+    },
+    {
       "name": "Ваня Потехин",
       "position": "старший руководитель проектов",
       "photo": "upload/resize_cache/iblock/44a/318_477_1619711fa078991f0a23d032687646b21/72mm50028lx702598mu3o564qcbtlxn4.png",
+      "id": 3,
       "vk": "#",
       "active": true
     },
     {
+      "name": "Костя Дмитриев",
+      "position": "специалист по информационным системам",
+      "photo": "upload/resize_cache/iblock/fc5/318_477_1619711fa078991f0a23d032687646b21/elpr32rtbthyfs96gyv3e4kl16tasho9.png",
+      "id": 4,
+      "vk": "#",
+      "active": true
+    },
+    {
+      "name": "Лена Мочалова",
+      "position": "руководитель HR-отдела",
+      "photo": "upload/resize_cache/iblock/23e/318_477_1619711fa078991f0a23d032687646b21/mbplaw8v373gdxkb6ii9saccgsjghzlv.png",
       "id": 5,
-      "name": "nikitosiron",
-      "position": "ceo",
-      "photo": "upload/placeholder-avatar.svg",
       "vk": "#",
       "active": true
     },
     {
+      "name": "Гасан Агаев",
+      "position": "руководитель проекта",
+      "photo": "upload/resize_cache/iblock/6ab/336_456_1619711fa078991f0a23d032687646b21/lp4sz53lkyjv8p483o9kt4ikpe2xs8pk.png",
       "id": 6,
-      "name": "Новый сотрудник",
-      "position": "СТО",
-      "photo": "",
+      "vk": "#",
+      "active": true
+    },
+    {
+      "name": "Таня Глазырина",
+      "position": "продуктовый дизайнер",
+      "photo": "upload/resize_cache/iblock/aaa/318_477_1619711fa078991f0a23d032687646b21/9m2v37w8bboj9zsr34ohimbzboi2rbej.png",
+      "id": 7,
+      "vk": "#",
+      "active": true
+    },
+    {
+      "name": "Саша Очеев",
+      "position": "инженер-программист",
+      "photo": "upload/resize_cache/iblock/c1f/318_477_1619711fa078991f0a23d032687646b21/aqkl6fr9dl37nsbgbck489ltq9gaxjwj.png",
+      "id": 8,
+      "vk": "#",
+      "active": true
+    },
+    {
+      "name": "Настя Волкова",
+      "position": "руководитель отдела дизайна",
+      "photo": "upload/resize_cache/iblock/e37/318_477_1619711fa078991f0a23d032687646b21/3ht0rqk20ni0ox2vb7uqafl4b4d43h2w.png",
+      "id": 9,
+      "vk": "#",
+      "active": true
+    },
+    {
+      "name": "Оля Рядова",
+      "position": "руководитель отдела аналитики",
+      "photo": "upload/resize_cache/iblock/404/324_477_1619711fa078991f0a23d032687646b21/lp0xwm3awi8twhvqovjfzlca8eboax6u.png",
+      "id": 10,
+      "vk": "#",
+      "active": true
+    },
+    {
+      "name": "Женя Гермогенов",
+      "position": "старший руководитель проектов",
+      "photo": "upload/resize_cache/iblock/71d/314_477_1619711fa078991f0a23d032687646b21/dmjg21l9b1oqioh6y3bsdmsuo73wwasu.png",
+      "id": 11,
+      "vk": "#",
+      "active": true
+    },
+    {
+      "name": "Игорь Егошин",
+      "position": "старший инженер-программист",
+      "photo": "upload/resize_cache/iblock/2ed/318_477_1619711fa078991f0a23d032687646b21/0g73x2njkshf9qmujyub0hjp9zl87v1w.png",
+      "id": 12,
+      "vk": "#",
+      "active": true
+    },
+    {
+      "name": "Настя Ягодарова",
+      "position": "руководитель проекта",
+      "photo": "upload/resize_cache/iblock/086/318_477_1619711fa078991f0a23d032687646b21/dh9piduru4t57xz8i7aqpjt6nxysrwc9.png",
+      "id": 13,
       "vk": "#",
       "active": true
     }
@@ -87,73 +184,328 @@
     },
     {
       "id": 2,
-      "title": "старший руководитель проектов"
+      "title": "СРО"
     },
     {
       "id": 3,
-      "title": "ceo"
+      "title": "старший руководитель проектов"
+    },
+    {
+      "id": 4,
+      "title": "специалист по информационным системам"
+    },
+    {
+      "id": 5,
+      "title": "руководитель HR-отдела"
+    },
+    {
+      "id": 6,
+      "title": "руководитель проекта"
+    },
+    {
+      "id": 7,
+      "title": "продуктовый дизайнер"
+    },
+    {
+      "id": 8,
+      "title": "инженер-программист"
+    },
+    {
+      "id": 9,
+      "title": "руководитель отдела дизайна"
+    },
+    {
+      "id": 10,
+      "title": "руководитель отдела аналитики"
+    },
+    {
+      "id": 11,
+      "title": "старший инженер-программист"
     }
   ],
   "gallery": [
     {
       "id": 1,
       "image": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
-      "text": "Лена рассказывает студентам, что у нас на работе бесплатные обеды"
+      "caption": "Лена рассказывает студентам, что у нас на работе бесплатные обеды",
+      "active": true
     },
     {
       "id": 2,
       "image": "upload/iblock/8cf/wqhgklblrdfh91duv5b6nfsdm27c32xg.png",
-      "text": "Эд на нашей конфе для отельеров \"Overbooking\" рассказывает, как хвалить сотрудников"
+      "caption": "Эд на нашей конфе для отельеров \"Overbooking\" рассказывает, как хвалить сотрудников",
+      "active": true
     },
     {
       "id": 3,
       "image": "upload/iblock/853/bxlhh2bko0jjbbg0bz1bbj14deankr1u.mp4",
-      "text": "у нас есть традиция летать в день рождения (и ломать потолок)"
+      "caption": "у нас есть традиция летать в день рождения (и ломать потолок)",
+      "active": true
     },
     {
       "id": 4,
       "image": "upload/iblock/d83/bpd526tbcdfun58uwp6c5ohnkj55bou5.png",
-      "text": "поем под гитару у костра"
+      "caption": "поем под гитару у костра",
+      "active": true
     },
     {
       "id": 5,
       "image": "upload/iblock/a0c/m95maqfvn7s807xpx4d0sq4i1mwcdcum.mp4",
-      "text": "у нас в компании несколько музыкальных групп, ребята дают жару!"
+      "caption": "у нас в компании несколько музыкальных групп, ребята дают жару!",
+      "active": true
     },
     {
       "id": 6,
       "image": "upload/iblock/681/ub05v3k8gv79d307qa03qdkd2e76l0y3.png",
-      "text": "в офис часто приходят студенты и дети послушать, как устроена работа в IT-компании. Денис рассказывает про дизайн"
+      "caption": "в офис часто приходят студенты и дети послушать, как устроена работа в IT-компании. Денис рассказывает про дизайн",
+      "active": true
     },
     {
       "id": 7,
       "image": "upload/iblock/4a2/b1ywyy4m35qwftkoardpfsfj1zehpjwe.png",
-      "text": "ребята на новогоднем корпорате решают срочные вопросики"
+      "caption": "ребята на новогоднем корпорате решают срочные вопросики",
+      "active": true
     },
     {
       "id": 8,
       "image": "upload/iblock/997/863a5cp2kqslo707gpj2lu0x4ty7gp41.png",
-      "text": "проводим митапы в офисе и в онлайне"
+      "caption": "проводим митапы в офисе и в онлайне",
+      "active": true
     },
     {
       "id": 9,
       "image": "upload/iblock/909/d2z81odrjf2xmyxo8ai17fiujr4xwwyx.png",
-      "text": "дети сотрудников на \"IT-лыжне\" вместе"
+      "caption": "дети сотрудников на \"IT-лыжне\" вместе",
+      "active": true
     },
     {
       "id": 10,
       "image": "upload/iblock/49c/58iuxfdoz01g037kt13f2sq9mlhp61vc.png",
-      "text": "просто Данил греется на солнышке"
+      "caption": "просто Данил греется на солнышке",
+      "active": true
     },
     {
       "id": 11,
       "image": "upload/iblock/827/59cfq0v8amb03ye2zzbdxety13rlj0xf.mp4",
-      "text": "любим вместе выезжать на природу, проводить выходные на берегу Волги"
+      "caption": "любим вместе выезжать на природу, проводить выходные на берегу Волги",
+      "active": true
     },
     {
       "id": 12,
       "image": "upload/iblock/063/3dy1df42llybzsot7uad0a5yltmo7e53.png",
-      "text": "Миша и его собака пишут код из Новосибирска"
+      "caption": "Миша и его собака пишут код из Новосибирска",
+      "active": true
+    }
+  ],
+  "platform": [
+    {
+      "type": 3,
+      "year": "2009",
+      "mark": "upload/marks/rocket.svg",
+      "title": "Extranet",
+      "strategy": "B2B",
+      "subtitle": "Личный кабинет отельера",
+      "text": "",
+      "id": 1,
+      "active": true
+    },
+    {
+      "type": 2,
+      "year": "2009",
+      "mark": "upload/marks/booking.svg",
+      "title": "Booking Engine",
+      "strategy": "B2С",
+      "subtitle": "Модуль бронирования для сайта отеля",
+      "text": "Позволяет забронировать проживание и дополнительные услуги на сайте отеля. Это флагманский продукт компании, который соединяет гостя и гостиницу.",
+      "id": 2,
+      "active": true
+    },
+    {
+      "type": 4,
+      "year": "2011",
+      "mark": "upload/marks/crm-integration.svg",
+      "title": "PMS Integration",
+      "strategy": "B2B",
+      "subtitle": "Интеграция с АСУ (автоматизированными системами управления)",
+      "text": "Автоматизирует процессы продаж в гостинице через платформу TravelLine. Все данные о бронированиях, ценах, количестве свободных номеров и ограничениях на продажу номеров автоматически синхронизируются с PMS (системой управления гостиницей).",
+      "id": 3,
+      "active": true
+    },
+    {
+      "type": 5,
+      "year": "2012",
+      "mark": "upload/marks/binoculars.svg",
+      "title": "Analytics",
+      "strategy": "B2B",
+      "subtitle": "Модуль аналитики внутри личного кабинета",
+      "text": "Собирает важные метрики производительности отеля на основе данных платформы TravelLine и визуализирует их. Позволяет менеджерам отеля решать ежедневные задачи и принимать обоснованные решения.",
+      "id": 4,
+      "active": true
+    },
+    {
+      "type": 6,
+      "year": "2013",
+      "mark": "upload/marks/channel-manager.svg",
+      "title": "Channel Manager",
+      "strategy": "B2B",
+      "subtitle": "Менеджер каналов бронирования отеля и гостиницы",
+      "text": "Упрощает работу отеля с более чем 130 каналами продаж. Это геораспределенный сервис, синхронизирующий цены и квоту между отелем и нашими партнерами (Яндекс, Островок, Забронируй, Суточно.ru и др)",
+      "id": 5,
+      "active": true
+    },
+    {
+      "type": 8,
+      "year": "2014",
+      "mark": "upload/marks/price-optimizer.svg",
+      "title": "Rate Shopper",
+      "strategy": "B2B",
+      "subtitle": "Модуль для анализа цен конкурентов",
+      "text": "Анализирует цены конкурентных отелей каждый день. Отельер настраивает когда, у кого и на какой период собирать цены, а Rate Shopper готовит для него графики и отчеты.",
+      "id": 6,
+      "active": true
+    },
+    {
+      "type": 11,
+      "year": "2016",
+      "mark": "upload/marks/star.svg",
+      "title": "WebPMS",
+      "strategy": "B2B",
+      "subtitle": "Система управления для отелей и гостиниц",
+      "text": "Позволяет отельерам следить за бронями, номерами и доходом из любой точки мира, где есть интернет.",
+      "id": 7,
+      "active": true
+    },
+    {
+      "type": 10,
+      "year": "2016",
+      "mark": "upload/marks/reputation.svg",
+      "title": "Reputation",
+      "strategy": "B2B",
+      "subtitle": "Модуль для управление онлайн-репутацией отеля",
+      "text": "Делает сбор новых отзывов об отеле в интернете, чтобы клиентам не пришлось собирать их вручную. Помогает отвечать на отзывы автоматически, добавлять отзывы на официальный сайт.",
+      "id": 8,
+      "active": true
+    },
+    {
+      "type": 9,
+      "year": "2016",
+      "mark": "upload/marks/express.svg",
+      "title": "Express",
+      "strategy": "B2B, В2С",
+      "subtitle": "Конструктор гостиничного сайта",
+      "text": "Позволяет отелям и гостиницам самостоятельно создавать свои сайты, используя адаптивные темы и структуру, разработанные нашими экспертами.",
+      "id": 9,
+      "active": true
+    },
+    {
+      "type": 12,
+      "year": "2017",
+      "mark": "upload/marks/mobile-extranet.svg",
+      "title": "Мобильное приложение TL: Extranet",
+      "strategy": "B2B",
+      "subtitle": "",
+      "text": "Личный кабинет для мобильных устройств.",
+      "id": 10,
+      "active": true
+    },
+    {
+      "type": 13,
+      "year": "2018",
+      "mark": "upload/marks/price-optimizer.svg",
+      "title": "Price Optimizer",
+      "strategy": "В2В",
+      "subtitle": "Модуль для гибкого управление ценами",
+      "text": "Помогает отелям автоматизировать работу с динамичным ценообразованием. Включает мониторинг цен конкурентов и автоматический выбор оптимального уровня цены на основе данных о загрузке отеля и текущей рыночной ситуации.",
+      "id": 11,
+      "active": true
+    },
+    {
+      "type": 14,
+      "year": "2020",
+      "mark": "upload/marks/crm-integration.svg",
+      "title": "Интеграция с CRM",
+      "strategy": "В2В",
+      "subtitle": "",
+      "text": "Позволяет отелям работать с CRM (система управления взаимоотношениями с клиентами), интегрирует личный кабинет TravelLine с системами Битрикс24 и amoCRM.",
+      "id": 12,
+      "active": true
+    },
+    {
+      "type": 18,
+      "year": "2021",
+      "mark": "upload/marks/flower.svg",
+      "title": "ЛК Гостя",
+      "strategy": "В2С",
+      "subtitle": "Личный кабинет гостя в модуле бронирования",
+      "text": "Позволяет гостю работать с бронированием и отслеживать накопления в программе лояльности.",
+      "id": 13,
+      "active": true
+    },
+    {
+      "type": 17,
+      "year": "2021",
+      "mark": "upload/marks/order-management.svg",
+      "title": "Order Management",
+      "strategy": "В2В",
+      "subtitle": "Модуль онлайн управления заказами",
+      "text": "Автоматизирует и упрощает процесс работы с онлайн-платежами.",
+      "id": 14,
+      "active": true
+    },
+    {
+      "type": 16,
+      "year": "2021",
+      "mark": "upload/marks/star.svg",
+      "title": "Loyality",
+      "strategy": "В2В",
+      "subtitle": "Программа лояльности",
+      "text": "Дает возможность отелю настраивать собственную программу лояльности или интегрировать внешнюю.",
+      "id": 15,
+      "active": true
+    },
+    {
+      "type": 15,
+      "year": "2021",
+      "mark": "upload/marks/reactor.svg",
+      "title": "Reactor",
+      "strategy": "В2E",
+      "subtitle": "Единая UI платформа",
+      "text": "Содержит библиотеку визуальных компонентов и инструменты взаимодействия с пользователями.",
+      "id": 16,
+      "active": true
+    },
+    {
+      "type": 21,
+      "year": "2024",
+      "mark": "upload/marks/billing.svg",
+      "title": "Billing",
+      "strategy": "В2E",
+      "subtitle": "Внутренняя биллинговая система",
+      "text": "Автоматизирует процессы учета контрагентов, расчета вознаграждения, интеграции с учетными системами, выставления документов, контроля дебиторской задолженности и отправки уведомлений.",
+      "id": 17,
+      "active": true
+    },
+    {
+      "type": 20,
+      "year": "2024",
+      "mark": "upload/marks/gms.svg",
+      "title": "GMS",
+      "strategy": "В2В",
+      "subtitle": "Инструмент для анализа и общения с гостями",
+      "text": "Автоматически формирует сегменты гостей, анализирует их по множеству параметров, позволяет отправлять письма и сообщения гостям.",
+      "id": 18,
+      "active": true
+    },
+    {
+      "type": 19,
+      "year": "2024",
+      "mark": "upload/marks/partner-api.svg",
+      "title": "Partner API",
+      "strategy": "B2B",
+      "subtitle": "Набор публичных API компонентов платформы TravelLine",
+      "text": "Позволяет внешним системам устанавливать интеграции с платформой TravelLine.",
+      "id": 19,
+      "active": true
     }
   ]
 }
