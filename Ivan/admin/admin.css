@@ -423,6 +423,18 @@ textarea.field-input {
     flex: 1;
 }
 
+.tech-name {
+    flex: 0 0 200px;
+}
+
+.tech-icon {
+    flex: 1;
+}
+
+.contact-form-direction {
+    flex: 1;
+}
+
 .cards-grid {
     display: flex;
     gap: 20px;

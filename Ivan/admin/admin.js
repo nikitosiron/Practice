@@ -32,7 +32,10 @@ var cachedPositions = [];
 var cachedTeam = [];
 var cachedVacancies = [];
 var cachedGallery = [];
-var cachedPlatform = [];
+var cachedTimeline = [];
+var cachedBrands = [];
+var cachedWork = [];
+var cachedDirections = [];
 
 function loadData() {
     fetch('/api/data')
@@ -47,7 +50,10 @@ function loadData() {
             cachedTeam = data.team || [];
             cachedVacancies = data.vacancies || [];
             cachedGallery = data.gallery || [];
-            cachedPlatform = data.platform || [];
+            cachedTimeline = data.timeline || [];
+            cachedBrands = data.brands || [];
+            cachedWork = data.work || [];
+            cachedDirections = data.directions || [];
 
             renderHeroForm(data.hero);
             renderTeam(cachedTeam);
@@ -55,7 +61,11 @@ function loadData() {
             renderBenefits(data.benefits);
             renderPositions(cachedPositions);
             renderGallery(cachedGallery);
-            renderPlatform(cachedPlatform);
+            renderTimeline(cachedTimeline);
+            renderBrands(cachedBrands);
+            renderWork(cachedWork);
+            renderDirections(cachedDirections);
+            renderContactForm(data.contactForm || { title: '', description: '', directions: [] });
             updateStatCards(data);
             isDirty = false;
         })
@@ -70,10 +80,14 @@ var sectionLabels = {
     hero: 'О нас',
     team: 'Сотрудники',
     positions: 'Должности',
-    platform: 'Таймлайн платформы',
+    timeline: 'Таймлайн платформы',
     vacancies: 'Вакансии',
     benefits: 'Плюшки',
-    gallery: 'Фотогалерея'
+    gallery: 'Фотогалерея',
+    brands: 'Партнёры',
+    work: 'Офисы',
+    directions: 'Направления',
+    'contact-form': 'Контактная форма'
 };
 
 function switchSection(name) {
@@ -1014,30 +1028,23 @@ function deletePosition(id) {
 }
 
 // ─── Таймлайн платформы ─────────────────────────────────────
-// Блок 3 из ТЗ практики ("Развиваем платформу"). Поля контракта
-// зафиксированы публичной страницей Егора (dynamic-content.js:
-// renderPlatform/createPlatformCard): year, title, subtitle,
-// strategy, text, mark (путь к иконке из upload/marks/), type
-// (номер варианта оформления — не выносим в форму, сервер сам
-// сохраняет текущее значение при редактировании).
+// Блок 3 из ТЗ практики ("Развиваем платформу"). Контракт реально
+// зафиксирован сервером Никиты (dataService.js: validateTimelineItem,
+// /api/timeline, ключ data.timeline): year (целое число, 1990-2100),
+// name, category (строго один из B2B/B2C/B2E — это и есть "тип метки"
+// из ТЗ), subtitle, description, active. Иконок/картинок в контракте нет.
 
-var PLATFORM_MARKS = [
-    'upload/marks/billing.svg', 'upload/marks/binoculars.svg', 'upload/marks/booking.svg',
-    'upload/marks/channel-manager.svg', 'upload/marks/crm-integration.svg', 'upload/marks/express.svg',
-    'upload/marks/flower.svg', 'upload/marks/gms.svg', 'upload/marks/mobile-extranet.svg',
-    'upload/marks/order-management.svg', 'upload/marks/partner-api.svg', 'upload/marks/price-optimizer.svg',
-    'upload/marks/reactor.svg', 'upload/marks/reputation.svg', 'upload/marks/rocket.svg', 'upload/marks/star.svg'
-];
+var TIMELINE_CATEGORIES = ['B2B', 'B2C', 'B2E'];
 
-function renderPlatform(platform) {
-    var list = document.querySelector('#platform-list');
+function renderTimeline(timeline) {
+    var list = document.querySelector('#timeline-list');
     list.innerHTML = '';
-    for (var i = 0; i < platform.length; i++) {
-        list.appendChild(buildPlatformCard(platform[i], i + 1));
+    for (var i = 0; i < timeline.length; i++) {
+        list.appendChild(buildTimelineCard(timeline[i], i + 1));
     }
 }
 
-function buildPlatformCard(item, index) {
+function buildTimelineCard(item, index) {
     var card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = item.id;
@@ -1055,11 +1062,10 @@ function buildPlatformCard(item, index) {
     header.appendChild(buildActiveBadge(item.active));
     card.appendChild(header);
 
-    card.appendChild(buildField('Год', 'platform__item-year', item.year));
-    card.appendChild(buildField('Название продукта', 'platform__item-title', item.title));
-    card.appendChild(buildSelectField('Тип метки (иконка)', 'platform__item-mark', item.mark, PLATFORM_MARKS));
-    card.appendChild(buildField('Аудитория (например, B2B)', 'platform__item-strategy', item.strategy));
-    card.appendChild(buildField('Подзаголовок', 'platform__item-subtitle', item.subtitle));
+    card.appendChild(buildField('Год', 'timeline__item-year', item.year));
+    card.appendChild(buildField('Название продукта', 'timeline__item-name', item.name));
+    card.appendChild(buildSelectField('Тип метки (аудитория)', 'timeline__item-category', item.category, TIMELINE_CATEGORIES));
+    card.appendChild(buildField('Подзаголовок', 'timeline__item-subtitle', item.subtitle));
 
     var descLabel = document.createElement('label');
     descLabel.className = 'field-label';
@@ -1067,9 +1073,9 @@ function buildPlatformCard(item, index) {
     card.appendChild(descLabel);
 
     var desc = document.createElement('textarea');
-    desc.className = 'field-input platform__item-text';
+    desc.className = 'field-input timeline__item-description';
     desc.rows = 3;
-    desc.value = item.text;
+    desc.value = item.description;
     card.appendChild(desc);
 
     var actions = document.createElement('div');
@@ -1078,48 +1084,51 @@ function buildPlatformCard(item, index) {
     var saveBtn = document.createElement('button');
     saveBtn.className = 'btn primary small';
     saveBtn.textContent = 'Сохранить';
-    saveBtn.addEventListener('click', function () { savePlatformItem(item.id, card); });
+    saveBtn.addEventListener('click', function () { saveTimelineItem(item.id, card); });
     actions.appendChild(saveBtn);
 
     actions.appendChild(buildToggleButton(item.active, function () {
-        togglePlatformItemActive(item.id, item.active !== false);
+        toggleTimelineItemActive(item.id, item.active !== false);
     }));
 
     var delBtn = document.createElement('button');
     delBtn.className = 'btn danger small';
     delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deletePlatformItem(item.id); });
+    delBtn.addEventListener('click', function () { deleteTimelineItem(item.id); });
     actions.appendChild(delBtn);
 
     card.appendChild(actions);
     return card;
 }
 
-function collectPlatformData(card) {
+function collectTimelineData(card) {
     return {
-        year: card.querySelector('.platform__item-year').value,
-        title: card.querySelector('.platform__item-title').value,
-        mark: card.querySelector('.platform__item-mark').value,
-        strategy: card.querySelector('.platform__item-strategy').value,
-        subtitle: card.querySelector('.platform__item-subtitle').value,
-        text: card.querySelector('.platform__item-text').value
+        year: Number(card.querySelector('.timeline__item-year').value),
+        name: card.querySelector('.timeline__item-name').value,
+        category: card.querySelector('.timeline__item-category').value,
+        subtitle: card.querySelector('.timeline__item-subtitle').value,
+        description: card.querySelector('.timeline__item-description').value
     };
 }
 
-function savePlatformItem(id, card) {
-    var data = collectPlatformData(card);
-    var item = findById(cachedPlatform, id);
+function saveTimelineItem(id, card) {
+    var data = collectTimelineData(card);
+    var item = findById(cachedTimeline, id);
     data.active = item ? item.active !== false : true;
 
-    if (data.year.trim() === '' || data.title.trim() === '' || data.text.trim() === '') {
-        showStatus('Заполните год, название продукта и описание', 'error');
+    if (!Number.isInteger(data.year) || data.year < 1990 || data.year > 2100) {
+        showStatus('Год должен быть целым числом от 1990 до 2100', 'error');
+        return;
+    }
+    if (data.name.trim() === '' || data.subtitle.trim() === '' || data.description.trim() === '') {
+        showStatus('Заполните название, подзаголовок и описание', 'error');
         return;
     }
 
-    apiRequest('PUT', '/api/platform/' + id, data)
+    apiRequest('PUT', '/api/timeline/' + id, data)
         .then(parseApiResponse)
         .then(function () {
-            showStatus('Карточка платформы сохранена');
+            showStatus('Карточка таймлайна сохранена');
             isDirty = false;
             loadData();
         })
@@ -1128,21 +1137,20 @@ function savePlatformItem(id, card) {
         });
 }
 
-function togglePlatformItemActive(id, currentlyActive) {
-    var item = findById(cachedPlatform, id);
+function toggleTimelineItemActive(id, currentlyActive) {
+    var item = findById(cachedTimeline, id);
     if (!item) return;
 
     var data = {
         year: item.year,
-        title: item.title,
-        mark: item.mark,
-        strategy: item.strategy,
+        name: item.name,
+        category: item.category,
         subtitle: item.subtitle,
-        text: item.text,
+        description: item.description,
         active: !currentlyActive
     };
 
-    apiRequest('PUT', '/api/platform/' + id, data)
+    apiRequest('PUT', '/api/timeline/' + id, data)
         .then(parseApiResponse)
         .then(function () {
             showStatus(currentlyActive ? 'Карточка деактивирована' : 'Карточка активирована');
@@ -1153,19 +1161,18 @@ function togglePlatformItemActive(id, currentlyActive) {
         });
 }
 
-function addPlatformItem() {
-    apiRequest('POST', '/api/platform', {
-        year: new Date().getFullYear().toString(),
-        title: 'Новый продукт',
-        mark: PLATFORM_MARKS[0],
-        strategy: 'B2B',
-        subtitle: '',
-        text: 'Описание продукта',
+function addTimelineItem() {
+    apiRequest('POST', '/api/timeline', {
+        year: new Date().getFullYear(),
+        name: 'Новый продукт',
+        category: 'B2B',
+        subtitle: 'Подзаголовок',
+        description: 'Описание продукта',
         active: true
     })
         .then(parseApiResponse)
         .then(function () {
-            showStatus('Карточка платформы добавлена');
+            showStatus('Карточка таймлайна добавлена');
             loadData();
         })
         .catch(function (error) {
@@ -1173,15 +1180,15 @@ function addPlatformItem() {
         });
 }
 
-function deletePlatformItem(id) {
-    if (!confirm('Удалить карточку платформы?')) {
+function deleteTimelineItem(id) {
+    if (!confirm('Удалить карточку таймлайна?')) {
         return;
     }
 
-    apiRequest('DELETE', '/api/platform/' + id)
+    apiRequest('DELETE', '/api/timeline/' + id)
         .then(parseApiResponse)
         .then(function () {
-            showStatus('Карточка платформы удалена');
+            showStatus('Карточка таймлайна удалена');
             loadData();
         })
         .catch(function (error) {
@@ -1190,12 +1197,11 @@ function deletePlatformItem(id) {
 }
 
 // ─── Фотогалерея ────────────────────────────────────────────
-// Блок 7 из ТЗ практики ("жизнь компании"). Поля item.image и
-// item.caption — контракт, зафиксированный сервером Никиты
-// (dataService.js: validateGalleryItem требует image + caption).
-// Публичная страница Егора (dynamic-content.js) пока читает
-// item.text — это нужно поправить на его стороне на item.caption,
-// чтобы подписи фото отображались на сайте.
+// Блок 7 из ТЗ практики ("жизнь компании"). Контракт зафиксирован
+// сервером Никиты (dataService.js: validateGalleryItem): src, type
+// (строго "image" или "video"), caption, active.
+
+var GALLERY_TYPES = ['image', 'video'];
 
 function renderGallery(gallery) {
     var list = document.querySelector('#gallery-list');
@@ -1223,7 +1229,8 @@ function buildGalleryCard(item, index) {
     header.appendChild(buildActiveBadge(item.active));
     card.appendChild(header);
 
-    card.appendChild(buildField('Путь к изображению', 'gallery__item-image', item.image));
+    card.appendChild(buildField('Путь к файлу', 'gallery__item-src', item.src));
+    card.appendChild(buildSelectField('Тип файла', 'gallery__item-type', item.type, GALLERY_TYPES));
     card.appendChild(buildField('Подпись к фото', 'gallery__item-caption', item.caption));
 
     var actions = document.createElement('div');
@@ -1251,7 +1258,8 @@ function buildGalleryCard(item, index) {
 
 function collectGalleryData(card) {
     return {
-        image: card.querySelector('.gallery__item-image').value,
+        src: card.querySelector('.gallery__item-src').value,
+        type: card.querySelector('.gallery__item-type').value,
         caption: card.querySelector('.gallery__item-caption').value
     };
 }
@@ -1261,8 +1269,8 @@ function saveGalleryItem(id, card) {
     var item = findById(cachedGallery, id);
     data.active = item ? item.active !== false : true;
 
-    if (data.image.trim() === '' || data.caption.trim() === '') {
-        showStatus('Заполните путь к изображению и подпись', 'error');
+    if (data.src.trim() === '' || data.caption.trim() === '') {
+        showStatus('Заполните путь к файлу и подпись', 'error');
         return;
     }
 
@@ -1283,7 +1291,8 @@ function toggleGalleryItemActive(id, currentlyActive) {
     if (!item) return;
 
     var data = {
-        image: item.image,
+        src: item.src,
+        type: item.type,
         caption: item.caption,
         active: !currentlyActive
     };
@@ -1301,7 +1310,8 @@ function toggleGalleryItemActive(id, currentlyActive) {
 
 function addGalleryItem() {
     apiRequest('POST', '/api/gallery', {
-        image: '',
+        src: '',
+        type: 'image',
         caption: 'Новая подпись',
         active: true
     })
@@ -1362,6 +1372,575 @@ function deleteAllGalleryItems() {
         });
 }
 
+// ─── Логотипы партнёров и клиентов (блок 4) ─────────────────
+// Контракт сервера (dataService.js: validateBrand): src, name, active.
+
+function renderBrands(brands) {
+    var list = document.querySelector('#brands-list');
+    list.innerHTML = '';
+    for (var i = 0; i < brands.length; i++) {
+        list.appendChild(buildBrandCard(brands[i], i + 1));
+    }
+}
+
+function buildBrandCard(item, index) {
+    var card = document.createElement('div');
+    card.className = 'card brands__item';
+    card.dataset.id = item.id;
+    if (item.active === false) card.classList.add('inactive');
+
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
+
+    var title = document.createElement('h3');
+    title.className = 'card-title';
+    title.textContent = 'Логотип #' + index;
+    title.style.margin = '0';
+    header.appendChild(title);
+
+    header.appendChild(buildActiveBadge(item.active));
+    card.appendChild(header);
+
+    card.appendChild(buildField('Путь к логотипу', 'brands__item-src', item.src));
+    card.appendChild(buildField('Название компании', 'brands__item-name', item.name));
+
+    var actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.className = 'btn primary small';
+    saveBtn.textContent = 'Сохранить';
+    saveBtn.addEventListener('click', function () { saveBrand(item.id, card); });
+    actions.appendChild(saveBtn);
+
+    actions.appendChild(buildToggleButton(item.active, function () {
+        toggleBrandActive(item.id, item.active !== false);
+    }));
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn danger small';
+    delBtn.textContent = 'Удалить';
+    delBtn.addEventListener('click', function () { deleteBrand(item.id); });
+    actions.appendChild(delBtn);
+
+    card.appendChild(actions);
+    return card;
+}
+
+function collectBrandData(card) {
+    return {
+        src: card.querySelector('.brands__item-src').value,
+        name: card.querySelector('.brands__item-name').value
+    };
+}
+
+function saveBrand(id, card) {
+    var data = collectBrandData(card);
+    var item = findById(cachedBrands, id);
+    data.active = item ? item.active !== false : true;
+
+    if (data.src.trim() === '' || data.name.trim() === '') {
+        showStatus('Заполните путь к логотипу и название', 'error');
+        return;
+    }
+
+    apiRequest('PUT', '/api/brands/' + id, data)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Логотип сохранён');
+            isDirty = false;
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка сохранения: ' + error.message, 'error');
+        });
+}
+
+function toggleBrandActive(id, currentlyActive) {
+    var item = findById(cachedBrands, id);
+    if (!item) return;
+
+    apiRequest('PUT', '/api/brands/' + id, { src: item.src, name: item.name, active: !currentlyActive })
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus(currentlyActive ? 'Логотип деактивирован' : 'Логотип активирован');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка: ' + error.message, 'error');
+        });
+}
+
+function addBrand() {
+    apiRequest('POST', '/api/brands', { src: '', name: 'Новый партнёр', active: true })
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Логотип добавлен');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка добавления: ' + error.message, 'error');
+        });
+}
+
+function deleteBrand(id) {
+    if (!confirm('Удалить логотип?')) {
+        return;
+    }
+
+    apiRequest('DELETE', '/api/brands/' + id)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Логотип удалён');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка удаления: ' + error.message, 'error');
+        });
+}
+
+// ─── Офисы «Работай как удобно» (блок 8) ────────────────────
+// Контракт сервера (dataService.js: validateWorkItem): image, caption, active.
+
+function renderWork(work) {
+    var list = document.querySelector('#work-list');
+    list.innerHTML = '';
+    for (var i = 0; i < work.length; i++) {
+        list.appendChild(buildWorkCard(work[i], i + 1));
+    }
+}
+
+function buildWorkCard(item, index) {
+    var card = document.createElement('div');
+    card.className = 'card work__item';
+    card.dataset.id = item.id;
+    if (item.active === false) card.classList.add('inactive');
+
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
+
+    var title = document.createElement('h3');
+    title.className = 'card-title';
+    title.textContent = 'Фото #' + index;
+    title.style.margin = '0';
+    header.appendChild(title);
+
+    header.appendChild(buildActiveBadge(item.active));
+    card.appendChild(header);
+
+    card.appendChild(buildField('Путь к фото', 'work__item-image', item.image));
+
+    var descLabel = document.createElement('label');
+    descLabel.className = 'field-label';
+    descLabel.textContent = 'Подпись';
+    card.appendChild(descLabel);
+
+    var desc = document.createElement('textarea');
+    desc.className = 'field-input work__item-caption';
+    desc.rows = 2;
+    desc.value = item.caption;
+    card.appendChild(desc);
+
+    var actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.className = 'btn primary small';
+    saveBtn.textContent = 'Сохранить';
+    saveBtn.addEventListener('click', function () { saveWorkItem(item.id, card); });
+    actions.appendChild(saveBtn);
+
+    actions.appendChild(buildToggleButton(item.active, function () {
+        toggleWorkItemActive(item.id, item.active !== false);
+    }));
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn danger small';
+    delBtn.textContent = 'Удалить';
+    delBtn.addEventListener('click', function () { deleteWorkItem(item.id); });
+    actions.appendChild(delBtn);
+
+    card.appendChild(actions);
+    return card;
+}
+
+function collectWorkData(card) {
+    return {
+        image: card.querySelector('.work__item-image').value,
+        caption: card.querySelector('.work__item-caption').value
+    };
+}
+
+function saveWorkItem(id, card) {
+    var data = collectWorkData(card);
+    var item = findById(cachedWork, id);
+    data.active = item ? item.active !== false : true;
+
+    if (data.image.trim() === '' || data.caption.trim() === '') {
+        showStatus('Заполните путь к фото и подпись', 'error');
+        return;
+    }
+
+    apiRequest('PUT', '/api/work/' + id, data)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Фото офиса сохранено');
+            isDirty = false;
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка сохранения: ' + error.message, 'error');
+        });
+}
+
+function toggleWorkItemActive(id, currentlyActive) {
+    var item = findById(cachedWork, id);
+    if (!item) return;
+
+    apiRequest('PUT', '/api/work/' + id, { image: item.image, caption: item.caption, active: !currentlyActive })
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus(currentlyActive ? 'Фото деактивировано' : 'Фото активировано');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка: ' + error.message, 'error');
+        });
+}
+
+function addWorkItem() {
+    apiRequest('POST', '/api/work', { image: '', caption: 'Новая подпись', active: true })
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Фото офиса добавлено');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка добавления: ' + error.message, 'error');
+        });
+}
+
+function deleteWorkItem(id) {
+    if (!confirm('Удалить фото офиса?')) {
+        return;
+    }
+
+    apiRequest('DELETE', '/api/work/' + id)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Фото офиса удалено');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка удаления: ' + error.message, 'error');
+        });
+}
+
+// ─── Направления (блок 5) ────────────────────────────────────
+// Контракт сервера (dataService.js: validateDirection): title,
+// description, technologies: [{name, icon}], active.
+
+function renderDirections(directions) {
+    var list = document.querySelector('#directions-list');
+    list.innerHTML = '';
+    for (var i = 0; i < directions.length; i++) {
+        list.appendChild(buildDirectionCard(directions[i], i + 1));
+    }
+}
+
+function buildTechnologyRow(tech) {
+    var row = document.createElement('div');
+    row.className = 'stats-row';
+
+    var name = document.createElement('input');
+    name.type = 'text';
+    name.className = 'field-input tech-name';
+    name.placeholder = 'Название (например, React)';
+    name.value = tech.name;
+    row.appendChild(name);
+
+    var icon = document.createElement('input');
+    icon.type = 'text';
+    icon.className = 'field-input tech-icon';
+    icon.placeholder = 'Путь к иконке';
+    icon.value = tech.icon;
+    row.appendChild(icon);
+
+    var del = document.createElement('button');
+    del.className = 'btn danger small';
+    del.textContent = 'Удалить';
+    del.addEventListener('click', function () {
+        row.remove();
+    });
+    row.appendChild(del);
+
+    return row;
+}
+
+function buildDirectionCard(item, index) {
+    var card = document.createElement('div');
+    card.className = 'card directions__item';
+    card.style.maxWidth = 'none';
+    card.style.flexBasis = '100%';
+    card.dataset.id = item.id;
+    if (item.active === false) card.classList.add('inactive');
+
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
+
+    var title = document.createElement('h3');
+    title.className = 'card-title';
+    title.textContent = 'Направление #' + index;
+    title.style.margin = '0';
+    header.appendChild(title);
+
+    header.appendChild(buildActiveBadge(item.active));
+    card.appendChild(header);
+
+    card.appendChild(buildField('Название направления', 'directions__item-title', item.title));
+
+    var descLabel = document.createElement('label');
+    descLabel.className = 'field-label';
+    descLabel.textContent = 'Описание';
+    card.appendChild(descLabel);
+
+    var desc = document.createElement('textarea');
+    desc.className = 'field-input directions__item-description';
+    desc.rows = 3;
+    desc.value = item.description;
+    card.appendChild(desc);
+
+    var techLabel = document.createElement('h4');
+    techLabel.className = 'subsection-title';
+    techLabel.textContent = 'Технологии';
+    card.appendChild(techLabel);
+
+    var techList = document.createElement('div');
+    techList.className = 'stats-list directions__item-technologies';
+    for (var i = 0; i < item.technologies.length; i++) {
+        techList.appendChild(buildTechnologyRow(item.technologies[i]));
+    }
+    card.appendChild(techList);
+
+    var addTechBtn = document.createElement('button');
+    addTechBtn.className = 'btn small';
+    addTechBtn.textContent = '+ Добавить технологию';
+    addTechBtn.style.marginBottom = '10px';
+    addTechBtn.addEventListener('click', function () {
+        var row = buildTechnologyRow({ name: '', icon: '' });
+        techList.appendChild(row);
+        row.querySelector('.tech-name').focus();
+    });
+    card.appendChild(addTechBtn);
+
+    var actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.className = 'btn primary small';
+    saveBtn.textContent = 'Сохранить';
+    saveBtn.addEventListener('click', function () { saveDirection(item.id, card); });
+    actions.appendChild(saveBtn);
+
+    actions.appendChild(buildToggleButton(item.active, function () {
+        toggleDirectionActive(item.id, item.active !== false);
+    }));
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn danger small';
+    delBtn.textContent = 'Удалить';
+    delBtn.addEventListener('click', function () { deleteDirection(item.id); });
+    actions.appendChild(delBtn);
+
+    card.appendChild(actions);
+    return card;
+}
+
+function collectDirectionData(card) {
+    var technologies = [];
+    var rows = card.querySelectorAll('.directions__item-technologies .stats-row');
+    for (var i = 0; i < rows.length; i++) {
+        technologies.push({
+            name: rows[i].querySelector('.tech-name').value,
+            icon: rows[i].querySelector('.tech-icon').value
+        });
+    }
+    return {
+        title: card.querySelector('.directions__item-title').value,
+        description: card.querySelector('.directions__item-description').value,
+        technologies: technologies
+    };
+}
+
+function saveDirection(id, card) {
+    var data = collectDirectionData(card);
+    var item = findById(cachedDirections, id);
+    data.active = item ? item.active !== false : true;
+
+    if (data.title.trim() === '' || data.description.trim() === '') {
+        showStatus('Заполните название и описание направления', 'error');
+        return;
+    }
+    for (var i = 0; i < data.technologies.length; i++) {
+        if (data.technologies[i].name.trim() === '' || data.technologies[i].icon.trim() === '') {
+            showStatus('Заполните все поля технологий или удалите пустые строки', 'error');
+            return;
+        }
+    }
+
+    apiRequest('PUT', '/api/directions/' + id, data)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Направление сохранено');
+            isDirty = false;
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка сохранения: ' + error.message, 'error');
+        });
+}
+
+function toggleDirectionActive(id, currentlyActive) {
+    var item = findById(cachedDirections, id);
+    if (!item) return;
+
+    apiRequest('PUT', '/api/directions/' + id, {
+        title: item.title,
+        description: item.description,
+        technologies: item.technologies,
+        active: !currentlyActive
+    })
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus(currentlyActive ? 'Направление деактивировано' : 'Направление активировано');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка: ' + error.message, 'error');
+        });
+}
+
+function addDirection() {
+    apiRequest('POST', '/api/directions', {
+        title: 'Новое направление',
+        description: 'Описание направления',
+        technologies: [],
+        active: true
+    })
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Направление добавлено');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка добавления: ' + error.message, 'error');
+        });
+}
+
+function deleteDirection(id) {
+    if (!confirm('Удалить направление?')) {
+        return;
+    }
+
+    apiRequest('DELETE', '/api/directions/' + id)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Направление удалено');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка удаления: ' + error.message, 'error');
+        });
+}
+
+// ─── Контактная форма «Напиши нам» (блок 10) ────────────────
+// Контракт сервера (dataService.js: validateContactForm): title,
+// description, directions: [строки]. Это singleton-объект (не список),
+// поэтому раздел оформлен как форма, а не как карточки — по образцу Hero.
+// Только PUT /api/contact-form, добавления/удаления карточек нет.
+
+function renderContactForm(form) {
+    document.querySelector('#contact-form-title').value = form.title || '';
+    document.querySelector('#contact-form-description').value = form.description || '';
+
+    var list = document.querySelector('#contact-form-directions');
+    list.innerHTML = '';
+    var directions = form.directions || [];
+    for (var i = 0; i < directions.length; i++) {
+        list.appendChild(buildContactFormDirectionRow(directions[i]));
+    }
+}
+
+function buildContactFormDirectionRow(value) {
+    var row = document.createElement('div');
+    row.className = 'stats-row';
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'field-input contact-form-direction';
+    input.value = value;
+    row.appendChild(input);
+
+    var del = document.createElement('button');
+    del.className = 'btn danger small';
+    del.textContent = 'Удалить';
+    del.addEventListener('click', function () {
+        row.remove();
+    });
+    row.appendChild(del);
+
+    return row;
+}
+
+function collectContactFormData() {
+    var directions = [];
+    var rows = document.querySelectorAll('#contact-form-directions .stats-row');
+    for (var i = 0; i < rows.length; i++) {
+        directions.push(rows[i].querySelector('.contact-form-direction').value);
+    }
+    return {
+        title: document.querySelector('#contact-form-title').value,
+        description: document.querySelector('#contact-form-description').value,
+        directions: directions
+    };
+}
+
+function saveContactForm() {
+    var data = collectContactFormData();
+
+    if (data.title.trim() === '' || data.description.trim() === '') {
+        showStatus('Заполните заголовок и описание', 'error');
+        return;
+    }
+    if (data.directions.length === 0) {
+        showStatus('Добавьте хотя бы один пункт в список направлений', 'error');
+        return;
+    }
+    for (var i = 0; i < data.directions.length; i++) {
+        if (data.directions[i].trim() === '') {
+            showStatus('Заполните все пункты списка или удалите пустые', 'error');
+            return;
+        }
+    }
+
+    apiRequest('PUT', '/api/contact-form', data)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Контактная форма сохранена');
+            isDirty = false;
+        })
+        .catch(function (error) {
+            showStatus('Ошибка сохранения: ' + error.message, 'error');
+        });
+}
+
+function addContactFormDirection() {
+    var list = document.querySelector('#contact-form-directions');
+    var row = buildContactFormDirectionRow('');
+    list.appendChild(row);
+    row.querySelector('.contact-form-direction').focus();
+}
+
 // ─── Утилиты ────────────────────────────────────────────────
 
 // Пути к фото сотрудников в data.json относительные ("upload/...") и
@@ -1393,9 +1972,14 @@ function wireStaticButtons() {
     document.querySelector('#vacancies-add').addEventListener('click', addVacancy);
     document.querySelector('#benefits-add').addEventListener('click', addBenefit);
     document.querySelector('#positions-add').addEventListener('click', addPosition);
-    document.querySelector('#platform-add').addEventListener('click', addPlatformItem);
+    document.querySelector('#timeline-add').addEventListener('click', addTimelineItem);
     document.querySelector('#gallery-add').addEventListener('click', addGalleryItem);
     document.querySelector('#gallery-delete-all').addEventListener('click', deleteAllGalleryItems);
+    document.querySelector('#brands-add').addEventListener('click', addBrand);
+    document.querySelector('#work-add').addEventListener('click', addWorkItem);
+    document.querySelector('#directions-add').addEventListener('click', addDirection);
+    document.querySelector('#contact-form-add-direction').addEventListener('click', addContactFormDirection);
+    document.querySelector('#contact-form-save').addEventListener('click', saveContactForm);
 }
 
 function wireViewToggle() {

@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAdvantagesTitleAnimation();
     renderTeam(data.team.filter(function (item) { return item.active !== false; }));
     initTeamVkLogoHover();
-    renderPlatform((data.platform || []).filter(function (item) { return item.active !== false; }));
+    renderTimeline((data.timeline || []).filter(function (item) { return item.active !== false; }));
     renderVacancies(data.vacancies.filter(function (item) { return item.active !== false; }));
     renderBenefits(data.benefits.filter(function (item) { return item.active !== false; }));
     renderGallery((data.gallery || []).filter(function (item) { return item.active !== false; }));
@@ -206,10 +206,12 @@ function createTeamCard(member) {
   return article;
 }
 
-function renderPlatform(platform) {
+const TIMELINE_CATEGORY_TYPE = { B2B: 1, B2C: 2, B2E: 3 };
+
+function renderTimeline(timeline) {
   const wrapper = document.querySelector('.platform-chart__wrapper');
 
-  if (!wrapper || !Array.isArray(platform)) {
+  if (!wrapper || !Array.isArray(timeline)) {
     return;
   }
 
@@ -256,38 +258,39 @@ function renderPlatform(platform) {
 </div>
 `;
 
-  platform.forEach((card) => {
-    const div = document.createElement('div');
-    div.className = 'platform-chart__col';
+  [...timeline]
+    .sort((a, b) => Number(a.id) - Number(b.id))
+    .forEach((card) => {
+      const div = document.createElement('div');
+      div.className = 'platform-chart__col';
 
-    const chartTitle = document.createElement('p');
-    chartTitle.className = 'platform-chart__col-title';
-    chartTitle.textContent = card.year || '';
+      const chartTitle = document.createElement('p');
+      chartTitle.className = 'platform-chart__col-title';
+      chartTitle.textContent = card.year || '';
 
-    div.appendChild(chartTitle);
-    div.appendChild(createPlatformCard(card));
-    wrapper.appendChild(div);
-  });
+      div.appendChild(chartTitle);
+      div.appendChild(createTimelineCard(card));
+      wrapper.appendChild(div);
+    });
 }
 
-function createPlatformCard(card) {
+function createTimelineCard(card) {
   const div = document.createElement('div');
   div.className = 'platform-chart__col-items';
 
+  const type = TIMELINE_CATEGORY_TYPE[card.category] || 1;
+
   div.innerHTML = `
-  <div class="platform-chart__col-item icon-block icon-block--${card.type || ''}">
+  <div class="platform-chart__col-item icon-block icon-block--${type}">
   <div class="icon-block__icon">
-
-    <img src="${card.mark || ''}" alt="${card.title || ''}" width="auto" height="auto" decoding="async" loading="lazy">
-
     <div class="icon-block__description">
-      <b>${card.title || ''} <span>${card.strategy || ''}</span></b>
+      <b>${card.name || ''} <span>${card.category || ''}</span></b>
       <small>${card.subtitle || ''}</small>
-      <p>${card.text || ''}</p>
+      <p>${card.description || ''}</p>
     </div>
   </div>
 
-  <p class="icon-block__text">${card.title || ''}</p>
+  <p class="icon-block__text">${card.name || ''}</p>
   <p class="icon-block__year">${card.year || ''}</p>
   </div>
 `;
@@ -388,9 +391,8 @@ function createGalleryImage(item) {
   const div = document.createElement('div');
   div.className = 'gallery__item gallery__item--type-img';
 
-  const src = item.image || '';
-  const isVideo = /\.(mp4|webm|mov)$/i.test(src);
-  const mediaTag = isVideo
+  const src = item.src || '';
+  const mediaTag = item.type === 'video'
     ? `<video class="card card--rounded" src="${src}" autoplay loop muted playsinline></video>`
     : `<img src="${src}" alt="" class="card card--rounded">`;
 

@@ -36,7 +36,7 @@
                     <span class="nav-icon">📋</span>
                     <span>Должности</span>
                 </button>
-                <button type="button" class="nav-item" data-section="platform">
+                <button type="button" class="nav-item" data-section="timeline">
                     <span class="nav-icon">🚀</span>
                     <span>Таймлайн платформы</span>
                 </button>
@@ -51,6 +51,22 @@
                 <button type="button" class="nav-item" data-section="gallery">
                     <span class="nav-icon">🖼️</span>
                     <span>Фотогалерея</span>
+                </button>
+                <button type="button" class="nav-item" data-section="brands">
+                    <span class="nav-icon">🏢</span>
+                    <span>Партнёры</span>
+                </button>
+                <button type="button" class="nav-item" data-section="work">
+                    <span class="nav-icon">🏙️</span>
+                    <span>Офисы</span>
+                </button>
+                <button type="button" class="nav-item" data-section="directions">
+                    <span class="nav-icon">🧭</span>
+                    <span>Направления</span>
+                </button>
+                <button type="button" class="nav-item" data-section="contact-form">
+                    <span class="nav-icon">✉️</span>
+                    <span>Контактная форма</span>
                 </button>
 
                 <div class="nav-group-label">Просмотр</div>
@@ -143,10 +159,10 @@
                 <button type="button" class="btn add" id="positions-add">+ Добавить должность</button>
             </section>
 
-            <section class="block platform-section" data-block="platform" id="platform">
+            <section class="block timeline-section" data-block="timeline" id="timeline">
                 <h2 class="section-title">Таймлайн платформы</h2>
-                <div class="cards-grid" id="platform-list"></div>
-                <button type="button" class="btn add" id="platform-add">+ Добавить продукт</button>
+                <div class="cards-grid" id="timeline-list"></div>
+                <button type="button" class="btn add" id="timeline-add">+ Добавить продукт</button>
             </section>
 
             <section class="block vacancies-section" data-block="vacancies" id="vacancies">
@@ -170,6 +186,46 @@
                 <div class="section-actions">
                     <button type="button" class="btn add" id="gallery-add">+ Добавить фото</button>
                     <button type="button" class="btn danger" id="gallery-delete-all">Удалить все фото</button>
+                </div>
+            </section>
+
+            <section class="block brands-section" data-block="brands" id="brands">
+                <h2 class="section-title">Логотипы партнёров и клиентов</h2>
+                <div class="cards-grid brands__list" id="brands-list"></div>
+                <button type="button" class="btn add" id="brands-add">+ Добавить логотип</button>
+            </section>
+
+            <section class="block work-section" data-block="work" id="work">
+                <h2 class="section-title">Офисы («Работай как удобно»)</h2>
+                <div class="cards-grid work__list" id="work-list"></div>
+                <button type="button" class="btn add" id="work-add">+ Добавить фото офиса</button>
+            </section>
+
+            <section class="block directions-section" data-block="directions" id="directions">
+                <h2 class="section-title">Направления</h2>
+                <div class="cards-grid directions__list" id="directions-list"></div>
+                <button type="button" class="btn add" id="directions-add">+ Добавить направление</button>
+            </section>
+
+            <section class="block contact-form-section" data-block="contact-form" id="contact-form">
+                <h2 class="section-title">Контактная форма «Напиши нам»</h2>
+
+                <div class="hero-field">
+                    <label class="field-label">Заголовок</label>
+                    <input type="text" class="field-input" id="contact-form-title" value="">
+                </div>
+
+                <div class="hero-field">
+                    <label class="field-label">Описание</label>
+                    <textarea class="field-input" id="contact-form-description" rows="2"></textarea>
+                </div>
+
+                <h3 class="subsection-title">Направления в выпадающем списке формы</h3>
+                <div class="stats-list" id="contact-form-directions"></div>
+
+                <div class="section-actions">
+                    <button type="button" class="btn add" id="contact-form-add-direction">+ Добавить пункт</button>
+                    <button type="button" class="btn primary" id="contact-form-save">Сохранить раздел</button>
                 </div>
             </section>
 

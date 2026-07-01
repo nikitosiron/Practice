@@ -32,7 +32,27 @@ beforeEach(async () => {
         positions: [
             { id: 1, title: 'Dev' },
             { id: 2, title: 'QA' }
-        ]
+        ],
+        gallery: [
+            { id: 1, src: 'a.png', type: 'image', caption: 'Photo A', active: true },
+            { id: 2, src: 'b.mp4', type: 'video', caption: 'Video B', active: false }
+        ],
+        timeline: [
+            { id: 1, year: 2020, name: 'Product A', category: 'B2B', subtitle: 'Sub A', description: 'Desc A', active: true }
+        ],
+        brands: [
+            { id: 1, src: 'brand-a.svg', name: 'Brand A', active: true }
+        ],
+        work: [
+            { id: 1, image: 'office-a.jpg', caption: 'Office A', active: true }
+        ],
+        directions: [
+            {
+                id: 1, title: 'Backend', description: 'Backend team',
+                technologies: [{ name: 'Node.js', icon: 'node.png' }], active: true
+            }
+        ],
+        contactForm: { title: 'Write us', description: 'Fill the form', directions: ['Backend', 'Frontend'] }
     };
     await fs.writeFile(DATA_PATH, JSON.stringify(testData, null, 2), 'utf-8');
     delete require.cache[require.resolve('../src/dataService')];
@@ -186,5 +206,153 @@ describe('Missing positions array', () => {
         const svc = loadService();
         const positions = await svc.getPositions();
         assert.deepEqual(positions, []);
+    });
+});
+
+describe('Gallery CRUD', () => {
+    it('adds an image item', async () => {
+        const svc = loadService();
+        const item = await svc.addGalleryItem({ src: 'c.png', type: 'image', caption: 'Photo C' });
+        assert.equal(item.src, 'c.png');
+        assert.equal(item.active, true);
+    });
+
+    it('adds a video item', async () => {
+        const svc = loadService();
+        const item = await svc.addGalleryItem({ src: 'c.mp4', type: 'video', caption: 'Video C' });
+        assert.equal(item.type, 'video');
+    });
+
+    it('rejects an invalid type', async () => {
+        const svc = loadService();
+        await assert.rejects(
+            () => svc.addGalleryItem({ src: 'c.png', type: 'audio', caption: 'Bad' }),
+            { message: /type/ }
+        );
+    });
+
+    it('deletes a gallery item', async () => {
+        const svc = loadService();
+        const removed = await svc.deleteGalleryItem(1);
+        assert.equal(removed.src, 'a.png');
+    });
+});
+
+describe('Timeline CRUD', () => {
+    it('adds a timeline item', async () => {
+        const svc = loadService();
+        const item = await svc.addTimelineItem({
+            year: 2023, name: 'Product B', category: 'B2C', subtitle: 'Sub B', description: 'Desc B'
+        });
+        assert.equal(item.name, 'Product B');
+        assert.equal(item.year, 2023);
+    });
+
+    it('rejects a non-integer year', async () => {
+        const svc = loadService();
+        await assert.rejects(
+            () => svc.addTimelineItem({ year: 2023.5, name: 'X', category: 'B2B', subtitle: 'S', description: 'D' }),
+            { message: /year/ }
+        );
+    });
+
+    it('rejects an invalid category', async () => {
+        const svc = loadService();
+        await assert.rejects(
+            () => svc.addTimelineItem({ year: 2023, name: 'X', category: 'B2X', subtitle: 'S', description: 'D' }),
+            { message: /category/ }
+        );
+    });
+
+    it('updates a timeline item', async () => {
+        const svc = loadService();
+        const updated = await svc.updateTimelineItem(1, {
+            year: 2021, name: 'Product A2', category: 'B2E', subtitle: 'Sub A', description: 'Desc A', active: false
+        });
+        assert.equal(updated.name, 'Product A2');
+        assert.equal(updated.active, false);
+    });
+});
+
+describe('Brands CRUD', () => {
+    it('adds a brand', async () => {
+        const svc = loadService();
+        const brand = await svc.addBrand({ src: 'brand-b.svg', name: 'Brand B' });
+        assert.equal(brand.name, 'Brand B');
+    });
+
+    it('rejects a missing name', async () => {
+        const svc = loadService();
+        await assert.rejects(() => svc.addBrand({ src: 'x.svg', name: '' }), { message: /name/ });
+    });
+
+    it('deletes a brand', async () => {
+        const svc = loadService();
+        const removed = await svc.deleteBrand(1);
+        assert.equal(removed.name, 'Brand A');
+    });
+});
+
+describe('Work (offices) CRUD', () => {
+    it('adds a work item', async () => {
+        const svc = loadService();
+        const item = await svc.addWorkItem({ image: 'office-b.jpg', caption: 'Office B' });
+        assert.equal(item.caption, 'Office B');
+    });
+
+    it('rejects a missing caption', async () => {
+        const svc = loadService();
+        await assert.rejects(() => svc.addWorkItem({ image: 'x.jpg', caption: '' }), { message: /caption/ });
+    });
+});
+
+describe('Directions CRUD', () => {
+    it('adds a direction with technologies', async () => {
+        const svc = loadService();
+        const direction = await svc.addDirection({
+            title: 'Frontend', description: 'Frontend team',
+            technologies: [{ name: 'React', icon: 'react.png' }]
+        });
+        assert.equal(direction.title, 'Frontend');
+        assert.equal(direction.technologies.length, 1);
+    });
+
+    it('accepts an empty technologies array', async () => {
+        const svc = loadService();
+        const direction = await svc.addDirection({ title: 'Security', description: 'Security team', technologies: [] });
+        assert.deepEqual(direction.technologies, []);
+    });
+
+    it('rejects a technology missing icon', async () => {
+        const svc = loadService();
+        await assert.rejects(
+            () => svc.addDirection({ title: 'X', description: 'D', technologies: [{ name: 'Vue', icon: '' }] }),
+            { message: /icon/ }
+        );
+    });
+
+    it('deletes a direction', async () => {
+        const svc = loadService();
+        const removed = await svc.deleteDirection(1);
+        assert.equal(removed.title, 'Backend');
+    });
+});
+
+describe('Contact form (singleton)', () => {
+    it('updates the contact form', async () => {
+        const svc = loadService();
+        const form = await svc.updateContactForm({
+            title: 'New title', description: 'New description', directions: ['Backend', 'QA']
+        });
+        assert.equal(form.title, 'New title');
+        assert.deepEqual(form.directions, ['Backend', 'QA']);
+    });
+
+    it('rejects an empty directions list', async () => {
+        const svc = loadService();
+        await assert.rejects(
+            () => svc.updateContactForm({ title: 'T', description: 'D', directions: [] }),
+            { message: /directions/ }
+        );
     });
 });
