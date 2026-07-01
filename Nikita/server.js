@@ -9,6 +9,10 @@ const {
     addGalleryItem, updateGalleryItem, deleteGalleryItem,
     addTimelineItem, updateTimelineItem, deleteTimelineItem,
     addPosition, updatePosition, deletePosition,
+    addBrand, updateBrand, deleteBrand,
+    addWorkItem, updateWorkItem, deleteWorkItem,
+    addDirection, updateDirection, deleteDirection,
+    updateContactForm,
 } = require('./src/dataService');
 
 const app = express();
@@ -24,6 +28,10 @@ app.get('/api/data', async (req, res) => {
         if (!data.positions) data.positions = [];
         if (!data.gallery) data.gallery = [];
         if (!data.timeline) data.timeline = [];
+        if (!data.brands) data.brands = [];
+        if (!data.work) data.work = [];
+        if (!data.directions) data.directions = [];
+        if (!data.contactForm) data.contactForm = { title: '', description: '', directions: [] };
         res.json(data);
     } catch (err) {
         console.error('Ошибка чтения data.json:', err);
@@ -311,6 +319,150 @@ app.delete('/api/positions/:id', async (req, res) => {
         res.json({ success: true, data: removed });
     } catch (err) {
         console.error('DELETE /api/positions/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.post('/api/brands', async (req, res) => {
+    try {
+        const created = await addBrand(req.body);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        console.error('POST /api/brands:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.put('/api/brands/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const updated = await updateBrand(id, req.body);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('PUT /api/brands/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.delete('/api/brands/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const removed = await deleteBrand(id);
+        res.json({ success: true, data: removed });
+    } catch (err) {
+        console.error('DELETE /api/brands/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.post('/api/work', async (req, res) => {
+    try {
+        const created = await addWorkItem(req.body);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        console.error('POST /api/work:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.put('/api/work/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const updated = await updateWorkItem(id, req.body);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('PUT /api/work/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.delete('/api/work/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const removed = await deleteWorkItem(id);
+        res.json({ success: true, data: removed });
+    } catch (err) {
+        console.error('DELETE /api/work/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.post('/api/directions', async (req, res) => {
+    try {
+        const created = await addDirection(req.body);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        console.error('POST /api/directions:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.put('/api/directions/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const updated = await updateDirection(id, req.body);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('PUT /api/directions/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.delete('/api/directions/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const removed = await deleteDirection(id);
+        res.json({ success: true, data: removed });
+    } catch (err) {
+        console.error('DELETE /api/directions/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.put('/api/contact-form', async (req, res) => {
+    try {
+        const updated = await updateContactForm(req.body);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('PUT /api/contact-form:', err);
         const status = err.status || 500;
         const message = err.status ? err.message : 'Внутренняя ошибка сервера';
         res.status(status).json({ success: false, message });

@@ -114,19 +114,22 @@
   "gallery": [
     {
       "id": 1,
-      "image": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
+      "src": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
+      "type": "image",
       "caption": "— Лена рассказывает студентам, что у нас на работе бесплатные обеды",
       "active": true
     },
     {
       "id": 2,
-      "image": "upload/iblock/8cf/wqhgklblrdfh91duv5b6nfsdm27c32xg.png",
+      "src": "upload/iblock/8cf/wqhgklblrdfh91duv5b6nfsdm27c32xg.png",
+      "type": "image",
       "caption": "— Эд на нашей конфе для отельеров \"Overbooking\" рассказывает, как хвалить сотрудников",
       "active": true
     },
     {
       "id": 3,
-      "image": "upload/iblock/d83/bpd526tbcdfun58uwp6c5ohnkj55bou5.png",
+      "src": "upload/iblock/d83/bpd526tbcdfun58uwp6c5ohnkj55bou5.png",
+      "type": "image",
       "caption": "— поем под гитару у костра",
       "active": true
     }
@@ -159,5 +162,183 @@
       "description": "Собирает важные метрики производительности отеля на основе данных платформы TravelLine и визуализирует их. Позволяет менеджерам отеля решать ежедневные задачи и принимать обоснованные решения.",
       "active": true
     }
-  ]
+  ],
+  "brands": [
+    {
+      "id": 1,
+      "src": "local/templates/template1/public/assets/images/brands/catherine-art.svg",
+      "name": "Catherine art",
+      "active": true
+    },
+    {
+      "id": 2,
+      "src": "local/templates/template1/public/assets/images/brands/cosmos.svg",
+      "name": "Cosmos",
+      "active": true
+    },
+    {
+      "id": 3,
+      "src": "local/templates/template1/public/assets/images/brands/helvetia.svg",
+      "name": "Helvetia",
+      "active": true
+    },
+    {
+      "id": 4,
+      "src": "local/templates/template1/public/assets/images/brands/ohta-park.svg",
+      "name": "Ohta park",
+      "active": true
+    },
+    {
+      "id": 5,
+      "src": "local/templates/template1/public/assets/images/brands/rus.svg",
+      "name": "Русь",
+      "active": true
+    },
+    {
+      "id": 6,
+      "src": "local/templates/template1/public/assets/images/brands/sochi-park.svg",
+      "name": "Sochi park",
+      "active": true
+    },
+    {
+      "id": 7,
+      "src": "local/templates/template1/public/assets/images/brands/premium-park.svg",
+      "name": "Премиум парк",
+      "active": true
+    },
+    {
+      "id": 8,
+      "src": "local/templates/template1/public/assets/images/brands/aquaclub.svg",
+      "name": "Акваклуб",
+      "active": true
+    },
+    {
+      "id": 9,
+      "src": "local/templates/template1/public/assets/images/brands/rzd-health.svg",
+      "name": "РЖД Здоровье",
+      "active": true
+    }
+  ],
+  "work": [
+    {
+      "id": 1,
+      "image": "upload/iblock/a90/b2ckfpv63kt740x426fxyryw7hsipu06.jpg",
+      "caption": "Офис в Йошкар-Оле",
+      "active": true
+    },
+    {
+      "id": 2,
+      "image": "upload/iblock/c7a/882dh2yvq6k5i3epabqigrms68pyrd5n.jpg",
+      "caption": "Это Паша :) Он живёт в Самаре и пишет код на берегу Волги",
+      "active": true
+    },
+    {
+      "id": 3,
+      "image": "upload/iblock/7b5/i21490yl4hrqwaepo6wasfgthyx23eya.jpg",
+      "caption": "Офис в Казани",
+      "active": true
+    },
+    {
+      "id": 4,
+      "image": "upload/iblock/0ab/jqecmmx6ar3bz3g5ovrhp0wws532ztqf.jpg",
+      "caption": "Катя тестировщик и живёт в Рыбинске. Любит приезжать в Йошкар-Олу, чтобы поработать вместе с командой",
+      "active": true
+    },
+    {
+      "id": 5,
+      "image": "upload/iblock/eb9/1xd2do64ycohcgzt95sb2tlu3vruhm2s.jpg",
+      "caption": "Офис в Санкт-Петербурге",
+      "active": true
+    }
+  ],
+  "directions": [
+    {
+      "id": 1,
+      "title": "Backend",
+      "description": "Разрабатываем мозг клиентских и платформенных сервисов компании. Проектируем архитектуру, работаем с реляционными и нереляционными БД, строим быстрые и безопасные API. Хостим в российских дата-центрах на своём железе.",
+      "technologies": [
+        { "name": "RabbitMQ", "icon": "local/templates/template1/public/assets/images/technologies/hz.png" },
+        { "name": "Tarantool", "icon": "local/templates/template1/public/assets/images/technologies/tarantool.png" },
+        { "name": "C#", "icon": "local/templates/template1/public/assets/images/technologies/cs.png" },
+        { "name": "SQL", "icon": "local/templates/template1/public/assets/images/technologies/sql.png" },
+        { "name": "Redis", "icon": "local/templates/template1/public/assets/images/technologies/redis.png" },
+        { "name": "PostgreSQL", "icon": "local/templates/template1/public/assets/images/technologies/postgresql.png" },
+        { "name": "ClickHouse", "icon": "local/templates/template1/public/assets/images/technologies/clickhouse.png" },
+        { "name": ".NET", "icon": "local/templates/template1/public/assets/images/technologies/net.png" }
+      ],
+      "active": true
+    },
+    {
+      "id": 2,
+      "title": "Frontend",
+      "description": "Основной проект B2C фронтенда — форма бронирования, которую используют около миллиона пользователей в месяц. Поддерживаем существующий стек и параллельно переписываем проект с AngularJS на React. Разрабатываем платформу Reactor на базе TypeScript + React.",
+      "technologies": [
+        { "name": "React 19", "icon": "local/templates/template1/public/assets/images/technologies/react.png" },
+        { "name": "TypeScript", "icon": "local/templates/template1/public/assets/images/technologies/typescript.png" },
+        { "name": "Webpack", "icon": "local/templates/template1/public/assets/images/technologies/webpack.png" },
+        { "name": "Vite", "icon": "local/templates/template1/public/assets/images/technologies/vite.png" },
+        { "name": "Jest", "icon": "local/templates/template1/public/assets/images/technologies/jest.png" },
+        { "name": "Testing Library", "icon": "local/templates/template1/public/assets/images/technologies/testing-library.png" },
+        { "name": "SASS", "icon": "local/templates/template1/public/assets/images/technologies/sass.png" }
+      ],
+      "active": true
+    },
+    {
+      "id": 3,
+      "title": "Тестирование",
+      "description": "В команде тестирования внимательные и дотошные специалисты. Инженеры участвуют на всех этапах создания продуктов: от анализа требований до деплоя в продакшен. Каждый может вносить предложения и улучшать процессы.",
+      "technologies": [
+        { "name": "Swagger", "icon": "local/templates/template1/public/assets/images/technologies/swagger.png" },
+        { "name": "GIT", "icon": "local/templates/template1/public/assets/images/technologies/git.png" },
+        { "name": "Java", "icon": "local/templates/template1/public/assets/images/technologies/java.png" },
+        { "name": "Selenium", "icon": "local/templates/template1/public/assets/images/technologies/selenium.png" },
+        { "name": "TestNG", "icon": "local/templates/template1/public/assets/images/technologies/testng.png" },
+        { "name": "Test IT", "icon": "local/templates/template1/public/assets/images/technologies/testit.png" },
+        { "name": "Fiddler", "icon": "local/templates/template1/public/assets/images/technologies/fiddler.png" },
+        { "name": "Jenkins", "icon": "local/templates/template1/public/assets/images/technologies/jenkins.png" },
+        { "name": "Postman", "icon": "local/templates/template1/public/assets/images/technologies/postman.png" }
+      ],
+      "active": true
+    },
+    {
+      "id": 4,
+      "title": "Проектирование и дизайн",
+      "description": "Команда проектирует интерфейсы и опыт взаимодействия отельеров и путешественников с нашими компонентами. Поддерживаем две дизайн-системы: Reactor для личного кабинета отельера и Alma для инструментов путешественников.",
+      "technologies": [
+        { "name": "Figma", "icon": "local/templates/template1/public/assets/images/technologies/figma.png" }
+      ],
+      "active": true
+    },
+    {
+      "id": 5,
+      "title": "Аналитика",
+      "description": "Аналитики упорядочивают хаос и развеивают неопределённость. Помогают командам принимать решения на основе данных. Разрабатываем собственные аналитические инструменты, включая системы логирования действий пользователей.",
+      "technologies": [
+        { "name": "Python", "icon": "local/templates/template1/public/assets/images/technologies/python.png" },
+        { "name": "MS SQL Server", "icon": "local/templates/template1/public/assets/images/technologies/mssql.png" },
+        { "name": "ClickHouse", "icon": "local/templates/template1/public/assets/images/technologies/clickhouse.png" }
+      ],
+      "active": true
+    },
+    {
+      "id": 6,
+      "title": "Безопасность",
+      "description": "Обеспечиваем безопасность сложных систем и продуктов, гарантируем надёжную защиту для клиентов и сотрудников TravelLine. Разрабатываем и внедряем требования информационной безопасности, консультируем и обучаем, проводим аудиты и расследуем инциденты.",
+      "technologies": [],
+      "active": true
+    }
+  ],
+  "contactForm": {
+    "title": "Напиши нам",
+    "description": "Если заполнишь форму, наш прекрасный эйчар с тобой свяжется (может быть даже покажет своего кота)",
+    "directions": [
+      "Backend",
+      "Frontend",
+      "Тестирование",
+      "Проектирование и дизайн",
+      "Аналитика",
+      "Безопасность",
+      "Другое"
+    ]
+  }
 }

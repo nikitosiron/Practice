@@ -213,15 +213,23 @@ async function deleteBenefit(id) {
     return removed;
 }
 
+const ALLOWED_GALLERY_TYPES = ['image', 'video'];
+
 function validateGalleryItem(item) {
     if (!item || typeof item !== 'object') {
         throw validationError('Тело запроса должно быть объектом карточки галереи');
     }
-    if (typeof item.image !== 'string' || item.image.trim() === '') {
-        throw validationError('Поле image обязательно и должно быть непустой строкой');
+    if (typeof item.src !== 'string' || item.src.trim() === '') {
+        throw validationError('Поле src обязательно и должно быть непустой строкой');
     }
     if (typeof item.caption !== 'string' || item.caption.trim() === '') {
         throw validationError('Поле caption обязательно и должно быть непустой строкой');
+    }
+    if (typeof item.type !== 'string') {
+        throw validationError('Поле type обязательно и должно быть строкой');
+    }
+    if (!ALLOWED_GALLERY_TYPES.includes(item.type)) {
+        throw validationError('Поле type должно быть одним из: image, video');
     }
 }
 
@@ -230,7 +238,8 @@ async function addGalleryItem(item) {
     const data = await readData();
     const newItem = {
         id: getNextId(data.gallery),
-        image: item.image,
+        src: item.src,
+        type: item.type,
         caption: item.caption,
         active: item.active !== false
     };
@@ -248,7 +257,8 @@ async function updateGalleryItem(id, item) {
     }
     const updated = {
         ...data.gallery[index],
-        image: item.image,
+        src: item.src,
+        type: item.type,
         caption: item.caption,
         active: item.active !== false
     };
@@ -408,6 +418,233 @@ async function deletePosition(id) {
 }
 
 
+function validateBrand(brand) {
+    if (!brand || typeof brand !== 'object') {
+        throw validationError('Тело запроса должно быть объектом бренда');
+    }
+    if (typeof brand.src !== 'string' || brand.src.trim() === '') {
+        throw validationError('Поле src обязательно и должно быть непустой строкой');
+    }
+    if (typeof brand.name !== 'string' || brand.name.trim() === '') {
+        throw validationError('Поле name обязательно и должно быть непустой строкой');
+    }
+}
+
+async function addBrand(brand) {
+    validateBrand(brand);
+    const data = await readData();
+    if (!data.brands) data.brands = [];
+    const newBrand = {
+        id: getNextId(data.brands),
+        src: brand.src,
+        name: brand.name,
+        active: brand.active !== false
+    };
+    data.brands.push(newBrand);
+    await writeData(data);
+    return newBrand;
+}
+
+async function updateBrand(id, brand) {
+    validateBrand(brand);
+    const data = await readData();
+    if (!data.brands) data.brands = [];
+    const index = data.brands.findIndex(b => b.id === id);
+    if (index === -1) {
+        throw notFoundError(`Бренд с id=${id} не найден`);
+    }
+    const updated = {
+        ...data.brands[index],
+        src: brand.src,
+        name: brand.name,
+        active: brand.active !== false
+    };
+    data.brands[index] = updated;
+    await writeData(data);
+    return updated;
+}
+
+async function deleteBrand(id) {
+    const data = await readData();
+    if (!data.brands) data.brands = [];
+    const index = data.brands.findIndex(b => b.id === id);
+    if (index === -1) {
+        throw notFoundError(`Бренд с id=${id} не найден`);
+    }
+    const [removed] = data.brands.splice(index, 1);
+    await writeData(data);
+    return removed;
+}
+
+function validateWorkItem(item) {
+    if (!item || typeof item !== 'object') {
+        throw validationError('Тело запроса должно быть объектом карточки офиса');
+    }
+    if (typeof item.image !== 'string' || item.image.trim() === '') {
+        throw validationError('Поле image обязательно и должно быть непустой строкой');
+    }
+    if (typeof item.caption !== 'string' || item.caption.trim() === '') {
+        throw validationError('Поле caption обязательно и должно быть непустой строкой');
+    }
+}
+
+async function addWorkItem(item) {
+    validateWorkItem(item);
+    const data = await readData();
+    if (!data.work) data.work = [];
+    const newItem = {
+        id: getNextId(data.work),
+        image: item.image,
+        caption: item.caption,
+        active: item.active !== false
+    };
+    data.work.push(newItem);
+    await writeData(data);
+    return newItem;
+}
+
+async function updateWorkItem(id, item) {
+    validateWorkItem(item);
+    const data = await readData();
+    if (!data.work) data.work = [];
+    const index = data.work.findIndex(w => w.id === id);
+    if (index === -1) {
+        throw notFoundError(`Карточка офиса с id=${id} не найдена`);
+    }
+    const updated = {
+        ...data.work[index],
+        image: item.image,
+        caption: item.caption,
+        active: item.active !== false
+    };
+    data.work[index] = updated;
+    await writeData(data);
+    return updated;
+}
+
+async function deleteWorkItem(id) {
+    const data = await readData();
+    if (!data.work) data.work = [];
+    const index = data.work.findIndex(w => w.id === id);
+    if (index === -1) {
+        throw notFoundError(`Карточка офиса с id=${id} не найдена`);
+    }
+    const [removed] = data.work.splice(index, 1);
+    await writeData(data);
+    return removed;
+}
+
+function validateTechnology(tech, i) {
+    if (!tech || typeof tech !== 'object') {
+        throw validationError(`technologies[${i}] должен быть объектом`);
+    }
+    if (typeof tech.name !== 'string' || tech.name.trim() === '') {
+        throw validationError(`technologies[${i}].name обязательно и должно быть непустой строкой`);
+    }
+    if (typeof tech.icon !== 'string' || tech.icon.trim() === '') {
+        throw validationError(`technologies[${i}].icon обязательно и должно быть непустой строкой`);
+    }
+}
+
+function validateDirection(direction) {
+    if (!direction || typeof direction !== 'object') {
+        throw validationError('Тело запроса должно быть объектом направления');
+    }
+    if (typeof direction.title !== 'string' || direction.title.trim() === '') {
+        throw validationError('Поле title обязательно и должно быть непустой строкой');
+    }
+    if (typeof direction.description !== 'string' || direction.description.trim() === '') {
+        throw validationError('Поле description обязательно и должно быть непустой строкой');
+    }
+    if (!Array.isArray(direction.technologies)) {
+        throw validationError('Поле technologies должно быть массивом');
+    }
+    direction.technologies.forEach(validateTechnology);
+}
+
+async function addDirection(direction) {
+    validateDirection(direction);
+    const data = await readData();
+    if (!data.directions) data.directions = [];
+    const newDirection = {
+        id: getNextId(data.directions),
+        title: direction.title,
+        description: direction.description,
+        technologies: direction.technologies.map(t => ({ name: t.name, icon: t.icon })),
+        active: direction.active !== false
+    };
+    data.directions.push(newDirection);
+    await writeData(data);
+    return newDirection;
+}
+
+async function updateDirection(id, direction) {
+    validateDirection(direction);
+    const data = await readData();
+    if (!data.directions) data.directions = [];
+    const index = data.directions.findIndex(d => d.id === id);
+    if (index === -1) {
+        throw notFoundError(`Направление с id=${id} не найдено`);
+    }
+    const updated = {
+        ...data.directions[index],
+        title: direction.title,
+        description: direction.description,
+        technologies: direction.technologies.map(t => ({ name: t.name, icon: t.icon })),
+        active: direction.active !== false
+    };
+    data.directions[index] = updated;
+    await writeData(data);
+    return updated;
+}
+
+async function deleteDirection(id) {
+    const data = await readData();
+    if (!data.directions) data.directions = [];
+    const index = data.directions.findIndex(d => d.id === id);
+    if (index === -1) {
+        throw notFoundError(`Направление с id=${id} не найдено`);
+    }
+    const [removed] = data.directions.splice(index, 1);
+    await writeData(data);
+    return removed;
+}
+
+function validateContactForm(form) {
+    if (!form || typeof form !== 'object') {
+        throw validationError('Тело запроса должно быть объектом контактной формы');
+    }
+    if (typeof form.title !== 'string' || form.title.trim() === '') {
+        throw validationError('Поле title обязательно и должно быть непустой строкой');
+    }
+    if (typeof form.description !== 'string' || form.description.trim() === '') {
+        throw validationError('Поле description обязательно и должно быть непустой строкой');
+    }
+    if (!Array.isArray(form.directions)) {
+        throw validationError('Поле directions должно быть массивом строк');
+    }
+    if (form.directions.length === 0) {
+        throw validationError('Поле directions должно содержать хотя бы один пункт');
+    }
+    form.directions.forEach((d, i) => {
+        if (typeof d !== 'string' || d.trim() === '') {
+            throw validationError(`directions[${i}] должен быть непустой строкой`);
+        }
+    });
+}
+
+async function updateContactForm(form) {
+    validateContactForm(form);
+    const data = await readData();
+    data.contactForm = {
+        title: form.title,
+        description: form.description,
+        directions: form.directions.slice()
+    };
+    await writeData(data);
+    return data.contactForm;
+}
+
 module.exports = {
     getNextId, updateHero, validationError, notFoundError,
     addTeamMember, updateTeamMember, deleteTeamMember,
@@ -415,5 +652,9 @@ module.exports = {
     addBenefit, updateBenefit, deleteBenefit,
     addGalleryItem, updateGalleryItem, deleteGalleryItem,
     addTimelineItem, updateTimelineItem, deleteTimelineItem,
-    getPositions, addPosition, updatePosition, deletePosition
+    getPositions, addPosition, updatePosition, deletePosition,
+    addBrand, updateBrand, deleteBrand,
+    addWorkItem, updateWorkItem, deleteWorkItem,
+    addDirection, updateDirection, deleteDirection,
+    updateContactForm
 };

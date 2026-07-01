@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { getNextId, addTeamMember, updateHero, addVacancy, addBenefit, addGalleryItem, addTimelineItem, addPosition } = require('../src/dataService');
+const { getNextId, addTeamMember, updateHero, addVacancy, addBenefit, addGalleryItem, addTimelineItem, addPosition, addBrand, addWorkItem, addDirection, updateContactForm } = require('../src/dataService');
 
 test('getNextId: пустой массив -> 1', () => {
     assert.strictEqual(getNextId([]), 1);
@@ -83,14 +83,21 @@ test('addBenefit: description из пробелов -> 400', async () => {
 
 test('addGalleryItem: без caption -> 400', async () => {
     await assert.rejects(
-        () => addGalleryItem({ image: 'upload/iblock/x.png' }),
+        () => addGalleryItem({ src: 'upload/iblock/x.png', type: 'image' }),
         (err) => err.status === 400
     );
 });
 
-test('addGalleryItem: image из пробелов -> 400', async () => {
+test('addGalleryItem: src из пробелов -> 400', async () => {
     await assert.rejects(
-        () => addGalleryItem({ image: '   ', caption: 'подпись' }),
+        () => addGalleryItem({ src: '   ', type: 'image', caption: 'подпись' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addGalleryItem: type XYZ -> 400', async () => {
+    await assert.rejects(
+        () => addGalleryItem({ src: 'upload/iblock/x.png', type: 'XYZ', caption: 'подпись' }),
         (err) => err.status === 400
     );
 });
@@ -134,6 +141,72 @@ test('addPosition: без title -> 400', async () => {
 test('addPosition: title из пробелов -> 400', async () => {
     await assert.rejects(
         () => addPosition({ title: '   ' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addBrand: без name -> 400', async () => {
+    await assert.rejects(
+        () => addBrand({ src: 'local/x.svg' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addBrand: src из пробелов -> 400', async () => {
+    await assert.rejects(
+        () => addBrand({ src: '   ', name: 'Cosmos' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addWorkItem: без caption -> 400', async () => {
+    await assert.rejects(
+        () => addWorkItem({ image: 'upload/x.jpg' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addWorkItem: image из пробелов -> 400', async () => {
+    await assert.rejects(
+        () => addWorkItem({ image: '   ', caption: 'офис' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addDirection: technologies не массив -> 400', async () => {
+    await assert.rejects(
+        () => addDirection({ title: 'X', description: 'desc', technologies: 'not array' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addDirection: technologies с пустым name -> 400', async () => {
+    await assert.rejects(
+        () => addDirection({
+            title: 'X', description: 'desc',
+            technologies: [{ name: '   ', icon: 'i.png' }]
+        }),
+        (err) => err.status === 400
+    );
+});
+
+test('addDirection: без description -> 400', async () => {
+    await assert.rejects(
+        () => addDirection({ title: 'X', technologies: [] }),
+        (err) => err.status === 400
+    );
+});
+
+test('updateContactForm: directions пустой массив -> 400', async () => {
+    await assert.rejects(
+        () => updateContactForm({ title: 'X', description: 'D', directions: [] }),
+        (err) => err.status === 400
+    );
+});
+
+test('updateContactForm: directions с пустой строкой -> 400', async () => {
+    await assert.rejects(
+        () => updateContactForm({ title: 'X', description: 'D', directions: ['Backend', '   '] }),
         (err) => err.status === 400
     );
 });
