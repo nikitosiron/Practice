@@ -95,6 +95,23 @@
       "url": "https://kazan.hh.ru/vacancy/133500742"
     }
   ],
+  "gallery": [
+    {
+      "id": 1,
+      "image": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
+      "text": "Лена рассказывает студентам, что у нас на работе бесплатные обеды"
+    },
+    {
+      "id": 2,
+      "image": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
+      "text": "Лена рассказывает студентам, что у нас на работе бесплатные обеды"
+    },
+    {
+      "id": 3,
+      "image": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
+      "text": "Лена рассказывает студентам, что у нас на работе бесплатные обеды"
+    }
+  ],
   "benefits": [
     {
       "id": 1,

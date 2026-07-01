@@ -4,11 +4,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderHero(data.hero);
     initAdvantagesTitleAnimation();
+
     renderTeam(data.team);
     initTeamVkLogoHover();
+
     renderPlatform(data.platform);
+
     renderVacancies(data.vacancies);
+
+    renderGallery(data.gallery);
+
     renderBenefits(data.benefits);
+
   } catch (error) {
     console.error('Ошибка загрузки динамического контента:', error);
   }
@@ -277,7 +284,7 @@ function createPlatformCard(card) {
   <div class="platform-chart__col-item icon-block icon-block--${card.type || ''}">
   <div class="icon-block__icon">
 
-    <img src="${card.mark || ''}" alt="${card.title || ''}" width="40" height="40" decoding="async" loading="lazy">
+    <img src="${card.mark || ''}" alt="${card.title || ''}" width="auto" height="auto" decoding="async" loading="lazy">
 
     <div class="icon-block__description">
       <b>${card.title || ''} <span>${card.strategy || ''}</span></b>
@@ -312,9 +319,9 @@ function createVacancyCard(vacancy) {
   article.className = 'vacancies__item card card--half-rounded';
 
   article.innerHTML = `
-    < h3 class="vacancies__item-title card__title heading heading--type-card" >
+    <h3 class="vacancies__item-title card__title heading heading--type-card" >
       ${vacancy.title || ''}
-    </h3 >
+    </h3>
 
     <div class="card__footer">
       <p class="vacancies__item-address card__address">
@@ -336,6 +343,34 @@ function createVacancyCard(vacancy) {
   `;
 
   return article;
+}
+
+function renderGallery(gallery) {
+  const container = document.querySelector('.gallery__container');
+
+  if (!container || !Array.isArray(gallery)) {
+    return;
+  }
+
+  container.innerHTML = '';
+
+  gallery.forEach((item) => {
+    container.appendChild(createGalleryImage(item));
+  });
+}
+
+function createGalleryImage(item) {
+  const div = document.createElement('div');
+  div.className = 'gallery__item gallery__item--type-img';
+
+  div.innerHTML = `
+  <img src="${item.image || ''}" alt="" class="card card--rounded">
+
+  <p class="gallery__item-text">— ${item.text || ''}
+  </p>
+  `;
+
+  return div;
 }
 
 function renderBenefits(benefits) {
