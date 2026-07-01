@@ -1010,11 +1010,12 @@ function deletePosition(id) {
 }
 
 // ─── Фотогалерея ────────────────────────────────────────────
-// Заготовка блока 7 из ТЗ практики: "Подпись к фото, путь к
-// изображению/видео. Добавление и удаление." Серверные роуты
-// /api/gallery ещё не реализованы (это зона участника 3) — до тех
-// пор запросы будут падать с ошибкой, но контракт уже готов и
-// повторяет паттерн остальных разделов (team/vacancies/benefits).
+// Блок 7 из ТЗ практики ("жизнь компании"). Поля item.image и
+// item.text — контракт, зафиксированный публичной страницей Егора
+// (dynamic-content.js: renderGallery/createGalleryImage читают
+// именно эти два поля). Серверные роуты /api/gallery ещё не
+// реализованы (зона участника 3) — до тех пор запросы будут падать
+// с ошибкой, но контракт уже согласован со всеми тремя частями.
 
 function renderGallery(gallery) {
     var list = document.querySelector('#gallery-list');
@@ -1034,8 +1035,8 @@ function buildGalleryCard(item, index) {
     title.textContent = 'Фото #' + index;
     card.appendChild(title);
 
-    card.appendChild(buildField('Подпись к фото', 'gallery__item-caption', item.caption));
-    card.appendChild(buildField('Путь к изображению/видео', 'gallery__item-media', item.mediaPath));
+    card.appendChild(buildField('Путь к изображению', 'gallery__item-image', item.image));
+    card.appendChild(buildField('Подпись к фото', 'gallery__item-text', item.text));
 
     card.appendChild(buildCardActions(
         function () { saveGalleryItem(item.id, card); },
@@ -1046,16 +1047,16 @@ function buildGalleryCard(item, index) {
 
 function collectGalleryData(card) {
     return {
-        caption: card.querySelector('.gallery__item-caption').value,
-        mediaPath: card.querySelector('.gallery__item-media').value
+        image: card.querySelector('.gallery__item-image').value,
+        text: card.querySelector('.gallery__item-text').value
     };
 }
 
 function saveGalleryItem(id, card) {
     var data = collectGalleryData(card);
 
-    if (data.caption.trim() === '' || data.mediaPath.trim() === '') {
-        showStatus('Заполните подпись и путь к файлу', 'error');
+    if (data.image.trim() === '' || data.text.trim() === '') {
+        showStatus('Заполните путь к изображению и подпись', 'error');
         return;
     }
 
@@ -1073,8 +1074,8 @@ function saveGalleryItem(id, card) {
 
 function addGalleryItem() {
     apiRequest('POST', '/api/gallery', {
-        caption: 'Новая подпись',
-        mediaPath: ''
+        image: '',
+        text: 'Новая подпись'
     })
         .then(parseApiResponse)
         .then(function () {

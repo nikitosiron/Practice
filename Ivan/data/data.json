@@ -93,5 +93,67 @@
       "id": 3,
       "title": "ceo"
     }
+  ],
+  "gallery": [
+    {
+      "id": 1,
+      "image": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
+      "text": "Лена рассказывает студентам, что у нас на работе бесплатные обеды"
+    },
+    {
+      "id": 2,
+      "image": "upload/iblock/8cf/wqhgklblrdfh91duv5b6nfsdm27c32xg.png",
+      "text": "Эд на нашей конфе для отельеров \"Overbooking\" рассказывает, как хвалить сотрудников"
+    },
+    {
+      "id": 3,
+      "image": "upload/iblock/853/bxlhh2bko0jjbbg0bz1bbj14deankr1u.mp4",
+      "text": "у нас есть традиция летать в день рождения (и ломать потолок)"
+    },
+    {
+      "id": 4,
+      "image": "upload/iblock/d83/bpd526tbcdfun58uwp6c5ohnkj55bou5.png",
+      "text": "поем под гитару у костра"
+    },
+    {
+      "id": 5,
+      "image": "upload/iblock/a0c/m95maqfvn7s807xpx4d0sq4i1mwcdcum.mp4",
+      "text": "у нас в компании несколько музыкальных групп, ребята дают жару!"
+    },
+    {
+      "id": 6,
+      "image": "upload/iblock/681/ub05v3k8gv79d307qa03qdkd2e76l0y3.png",
+      "text": "в офис часто приходят студенты и дети послушать, как устроена работа в IT-компании. Денис рассказывает про дизайн"
+    },
+    {
+      "id": 7,
+      "image": "upload/iblock/4a2/b1ywyy4m35qwftkoardpfsfj1zehpjwe.png",
+      "text": "ребята на новогоднем корпорате решают срочные вопросики"
+    },
+    {
+      "id": 8,
+      "image": "upload/iblock/997/863a5cp2kqslo707gpj2lu0x4ty7gp41.png",
+      "text": "проводим митапы в офисе и в онлайне"
+    },
+    {
+      "id": 9,
+      "image": "upload/iblock/909/d2z81odrjf2xmyxo8ai17fiujr4xwwyx.png",
+      "text": "дети сотрудников на \"IT-лыжне\" вместе"
+    },
+    {
+      "id": 10,
+      "image": "upload/iblock/49c/58iuxfdoz01g037kt13f2sq9mlhp61vc.png",
+      "text": "просто Данил греется на солнышке"
+    },
+    {
+      "id": 11,
+      "image": "upload/iblock/827/59cfq0v8amb03ye2zzbdxety13rlj0xf.mp4",
+      "text": "любим вместе выезжать на природу, проводить выходные на берегу Волги"
+    },
+    {
+      "id": 12,
+      "image": "upload/iblock/063/3dy1df42llybzsot7uad0a5yltmo7e53.png",
+      "text": "Миша и его собака пишут код из Новосибирска"
+    }
   ]
 }
