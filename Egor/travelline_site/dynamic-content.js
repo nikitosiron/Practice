@@ -1,20 +1,35 @@
+let vacanciesScrollTween = null;
+let workScrollTween = null;
+let galleryColorTrigger = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     const data = await loadSiteData();
 
     renderHero(data.hero);
-    initAdvantagesTitleAnimation();
 
     renderTeam(data.team);
     initTeamVkLogoHover();
 
     renderPlatform(data.platform);
 
+    renderBrands(data.brands);
+
     renderVacancies(data.vacancies);
 
     renderGallery(data.gallery);
 
+    renderOffices(data.offices);
+
     renderBenefits(data.benefits);
+
+    initAdvantagesTitleAnimation();
+    
+    initVacanciesScroll();
+
+    initGalleryAndWorkScroll();
+
+    refreshScrollTriggersAfterImagesLoad(document.querySelector('.gallery'), initGalleryAndWorkScroll);
 
   } catch (error) {
     console.error('Ошибка загрузки динамического контента:', error);
@@ -29,6 +44,53 @@ async function loadSiteData() {
   }
 
   return response.json();
+}
+
+function refreshScrollTriggers() {
+  if (!window.ScrollTrigger) {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    ScrollTrigger.refresh();
+  });
+}
+
+function refreshScrollTriggersAfterImagesLoad(root, onReady) {
+  if (!root || !window.ScrollTrigger) {
+    return;
+  }
+
+  const unloadedImages = Array.from(root.querySelectorAll('img')).filter((image) => !image.complete);
+
+  if (!unloadedImages.length) {
+    if (typeof onReady === 'function') {
+      onReady();
+    } else {
+      refreshScrollTriggers();
+    }
+    return;
+  }
+
+  let pendingImages = unloadedImages.length;
+  const refreshWhenReady = () => {
+    pendingImages -= 1;
+
+    if (pendingImages === 0) {
+      if (typeof onReady === 'function') {
+        onReady();
+      } else {
+        refreshScrollTriggers();
+      }
+    }
+  };
+
+  unloadedImages.forEach((image) => {
+    image.addEventListener('load', refreshWhenReady, { once: true });
+    image.addEventListener('error', refreshWhenReady, { once: true });
+  });
+
+  refreshScrollTriggers();
 }
 
 function initAdvantagesTitleAnimation() {
@@ -161,7 +223,9 @@ function renderTeam(team) {
   container.innerHTML = '';
 
   team.forEach((member) => {
-    container.appendChild(createTeamCard(member));
+    if (member.active) {
+      container.appendChild(createTeamCard(member));
+    }
   });
 }
 
@@ -262,7 +326,9 @@ function renderPlatform(platform) {
 </div>
 `;
 
-  platform.forEach((card) => {
+  [...platform]
+  .sort((a, b) => Number(a.id) - Number(b.id))
+  .forEach((card) => {
     const div = document.createElement('div');
     div.className = 'platform-chart__col';
 
@@ -300,6 +366,61 @@ function createPlatformCard(card) {
   return div;
 }
 
+function renderBrands(brands) {
+  const container = document.querySelector('.platform__brands.brands.swiper');
+
+  if (!container || !Array.isArray(brands)) {
+    return;
+  }
+
+  if (container.swiper) {
+    container.swiper.destroy(true, true);
+  }
+
+  container.innerHTML = '';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'swiper-wrapper';
+
+  for (let i = 0; i < 4; i++) {
+    const list = document.createElement('ul');
+    list.className = 'brands__list swiper-slide';
+
+    brands.forEach((brand) => {
+      list.appendChild(createBrandItem(brand));
+    });
+
+    wrapper.appendChild(list);
+  }
+
+  container.appendChild(wrapper);
+
+  new Swiper(container, {
+    loop: true,
+    autoplay: {
+      delay: 0,
+      disableOnInteraction: false
+    },
+    speed: 60000,
+    slidesPerView: 'auto',
+    spaceBetween: 60,
+    observer: true,
+    allowTouchMove: false,
+    simulateTouch: false
+  });
+}
+
+function createBrandItem(brand) {
+  const item = document.createElement('li');
+  item.className = 'brands__item';
+
+  item.innerHTML = `
+    <img src="${brand.image || ''}" alt="${brand.name || 'Brand'}">
+  `;
+
+  return item;
+}
+
 function renderVacancies(vacancies) {
   const container = document.querySelector('.vacancies__list');
 
@@ -312,6 +433,38 @@ function renderVacancies(vacancies) {
   vacancies.forEach((vacancy) => {
     container.appendChild(createVacancyCard(vacancy));
   });
+
+  const moreVacancies = document.createElement('article');
+  moreVacancies.className = 'vacancies__item vacancies__item--type-more card card--half-rounded';
+
+  moreVacancies.innerHTML = `
+  <h3 class="vacancies__item-title card__title heading heading--type-card">
+    Еще больше вакансий
+    на HeadHunter
+
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="14"
+      height="24"
+      viewBox="0 0 14 24"
+      fill="none"
+    >
+      <circle cx="2" cy="22" r="2" transform="rotate(-90 2 22)" fill="white" />
+      <circle cx="7" cy="17" r="2" transform="rotate(-90 7 17)" fill="white" />
+      <circle cx="12" cy="12" r="2" transform="rotate(-90 12 12)" fill="white" />
+      <circle cx="7" cy="7" r="2" transform="rotate(-90 7 7)" fill="white" />
+      <circle cx="2" cy="2" r="2" transform="rotate(-90 2 2)" fill="white" />
+    </svg>
+  </h3>
+
+  <a
+    href="https://yoshkar-ola.hh.ru/search/vacancy?from=employerPage&hhtmFrom=employer&professional_role=156&professional_role=160&professional_role=10&professional_role=12&professional_role=150&professional_role=25&professional_role=165&professional_role=34&professional_role=36&professional_role=73&professional_role=155&professional_role=96&professional_role=164&professional_role=104&professional_role=157&professional_role=107&professional_role=112&professional_role=113&professional_role=148&professional_role=114&professional_role=116&professional_role=121&professional_role=124&professional_role=125&professional_role=126&search_field=name&search_field=company_name&search_field=description&enable_snippets=false&employer_id=1136961"
+    class="vacancies__item-lik"
+    target="_blank"
+  ></a>
+
+  `;
+  container.appendChild(moreVacancies);
 }
 
 function createVacancyCard(vacancy) {
@@ -345,6 +498,154 @@ function createVacancyCard(vacancy) {
   return article;
 }
 
+function initVacanciesScroll() {
+  if (!window.gsap || !window.ScrollTrigger) {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const wrapper = document.querySelector('.vacancies__container');
+    const list = document.querySelector('.vacancies__list');
+
+    if (!wrapper || !list) {
+      return;
+    }
+
+    if (vacanciesScrollTween) {
+      vacanciesScrollTween.kill();
+      vacanciesScrollTween = null;
+    }
+
+    ScrollTrigger.getAll().forEach((trigger) => {
+      if (
+        trigger.vars.id === 'vacancies-scroll' ||
+        trigger.trigger === wrapper ||
+        trigger.pin === wrapper
+      ) {
+        trigger.kill(true);
+      }
+    });
+
+    gsap.killTweensOf(list);
+    gsap.set(list, { clearProps: 'transform' });
+
+    if (window.innerWidth < 1326) {
+      ScrollTrigger.refresh();
+      return;
+    }
+
+    const scrollDistance = list.scrollWidth - wrapper.offsetWidth;
+
+    if (scrollDistance <= 0) {
+      ScrollTrigger.refresh();
+      return;
+    }
+
+    vacanciesScrollTween = gsap.to(list, {
+      x: () => -(list.scrollWidth - wrapper.offsetWidth + 160),
+      ease: 'none',
+      scrollTrigger: {
+        id: 'vacancies-scroll',
+        trigger: wrapper,
+        start: 'top 30%',
+        end: () => '+=' + (list.scrollWidth - wrapper.offsetWidth),
+        scrub: true,
+        pin: true,
+        invalidateOnRefresh: true,
+        refreshPriority: 3,
+      },
+    });
+
+    ScrollTrigger.sort();
+    ScrollTrigger.refresh();
+  });
+}
+
+function initGalleryAndWorkScroll() {
+  if (!window.gsap || !window.ScrollTrigger) {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const gallery = document.querySelector('.gallery');
+    const work = document.querySelector('.work');
+    const workScrollSection = document.querySelector('.work__section--scroll');
+    const workText = document.querySelector('.work__container--text');
+
+    if (galleryColorTrigger) {
+      galleryColorTrigger.kill(true);
+      galleryColorTrigger = null;
+    }
+
+    if (workScrollTween) {
+      workScrollTween.kill();
+      workScrollTween = null;
+    }
+
+    ScrollTrigger.getAll().forEach((trigger) => {
+      if (
+        trigger.vars.id === 'gallery-color' ||
+        trigger.vars.id === 'work-scroll' ||
+        trigger.trigger === gallery ||
+        trigger.trigger === work ||
+        trigger.pin === work
+      ) {
+        trigger.kill(true);
+      }
+    });
+
+    if (work) {
+      gsap.killTweensOf(work);
+      gsap.set(work, { clearProps: 'transform' });
+    }
+
+    document.body.classList.remove('page--dark-bg');
+
+    if (window.innerWidth < 992 || !gallery || !work || !workScrollSection || !workText) {
+      ScrollTrigger.refresh();
+      return;
+    }
+
+    galleryColorTrigger = ScrollTrigger.create({
+      id: 'gallery-color',
+      trigger: gallery,
+      start: () => window.innerWidth >= 1600 ? 'top 160px' : 'top 120px',
+      end: 'bottom 50%',
+      refreshPriority: 2,
+      onEnter: () => {
+        document.body.classList.add('page--dark-bg');
+      },
+      onEnterBack: () => {
+        document.body.classList.add('page--dark-bg');
+      },
+      onLeave: () => {
+        document.body.classList.remove('page--dark-bg');
+      },
+      onLeaveBack: () => {
+        document.body.classList.remove('page--dark-bg');
+      }
+    });
+
+    workScrollTween = gsap.to(work, {
+      x: () => -(window.innerWidth / 2 + workScrollSection.scrollWidth - workText.scrollWidth / 2 - 80),
+      ease: 'none',
+      scrollTrigger: {
+        id: 'work-scroll',
+        trigger: work,
+        start: 'top 15%',
+        end: () => '+=' + workScrollSection.scrollWidth / 2,
+        scrub: true,
+        pin: true,
+        invalidateOnRefresh: true,
+        refreshPriority: 1
+      }
+    });
+
+    ScrollTrigger.sort();
+    ScrollTrigger.refresh();
+  });
+}
+
 function renderGallery(gallery) {
   const container = document.querySelector('.gallery__container');
 
@@ -373,6 +674,10 @@ function createGalleryImage(item) {
   return div;
 }
 
+function renderOffices(offices) {
+  const container = document.querySelector('.offices__list');
+}
+
 function renderBenefits(benefits) {
   const container = document.querySelector('.bonus__list');
 
@@ -392,9 +697,9 @@ function createBenefitCard(benefit, index) {
   article.className = `bonus__item bonus__item--${index + 1} card card--half - rounded card--default `;
 
   article.innerHTML = `
-    < h3 class="card__title bonus__item-title" >
+    <h3 class="card__title bonus__item-title">
       ${benefit.title || ''}
-    </h3 >
+    </h3>
 
     <p class="card__text bonus__item-text">
       ${benefit.description || ''}
