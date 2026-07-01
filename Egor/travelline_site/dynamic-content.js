@@ -7,23 +7,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const data = await loadSiteData();
 
     renderHero(data.hero);
+    initAdvantagesTitleAnimation();
 
     renderTeam(data.team);
     initTeamVkLogoHover();
 
-    renderPlatform(data.platform);
+    renderTimeline(data.platform);
 
     renderBrands(data.brands);
+
+    renderDirections(data.directions);
 
     renderVacancies(data.vacancies);
 
     renderGallery(data.gallery);
 
-    renderOffices(data.offices);
+    renderWork(data.work);
 
     renderBenefits(data.benefits);
 
-    initAdvantagesTitleAnimation();
+    renderForm(data.form);
     
     initVacanciesScroll();
 
@@ -93,55 +96,6 @@ function refreshScrollTriggersAfterImagesLoad(root, onReady) {
   refreshScrollTriggers();
 }
 
-function initAdvantagesTitleAnimation() {
-  if (window.innerWidth < 992) {
-    return;
-  }
-
-  ScrollTrigger.getAll().forEach((trigger) => {
-    if (trigger.vars.id === 'advantages-title') {
-      trigger.kill();
-    }
-  });
-
-  const items = document.querySelectorAll('.advantages__item');
-  const parts = document.querySelectorAll('.advantages__title-part');
-
-  items.forEach((item, index) => {
-    const part = parts[index];
-
-    if (!part) {
-      return;
-    }
-
-    ScrollTrigger.create({
-      id: 'advantages-title',
-      trigger: item,
-      start: 'top center',
-      end: 'bottom center',
-      scrub: true,
-      onEnter: () => {
-        item.classList.add('advantages__item--active');
-        gsap.to(part, { autoAlpha: 1 });
-      },
-      onLeave: () => {
-        item.classList.remove('advantages__item--active');
-        gsap.to(part, { autoAlpha: 0 });
-      },
-      onEnterBack: () => {
-        item.classList.add('advantages__item--active');
-        gsap.to(part, { autoAlpha: 1 });
-      },
-      onLeaveBack: () => {
-        item.classList.remove('advantages__item--active');
-        gsap.to(part, { autoAlpha: 0 });
-      }
-    });
-  });
-
-  ScrollTrigger.refresh();
-}
-
 function renderHero(hero) {
   const titleElement = document.querySelector('.hero__title');
   const statsList = document.querySelector('.advantages__list');
@@ -191,26 +145,53 @@ function renderHero(hero) {
   });
 }
 
-function initTeamVkLogoHover() {
-  const elements = document.querySelectorAll('.team__item-card');
+function initAdvantagesTitleAnimation() {
+  if (window.innerWidth < 992) {
+    return;
+  }
 
-  elements.forEach((el) => {
-    const vkLogo = el.querySelector('.team__item-vk-logo');
+  ScrollTrigger.getAll().forEach((trigger) => {
+    if (trigger.vars.id === 'advantages-title') {
+      trigger.kill();
+    }
+  });
 
-    if (!vkLogo) {
+  const items = document.querySelectorAll('.advantages__item');
+  const parts = document.querySelectorAll('.advantages__title-part');
+
+  items.forEach((item, index) => {
+    const part = parts[index];
+
+    if (!part) {
       return;
     }
 
-    el.addEventListener('mouseenter', () => {
-      vkLogo.classList.add('active');
-      vkLogo.classList.remove('inactive');
-    });
-
-    el.addEventListener('mouseleave', () => {
-      vkLogo.classList.add('inactive');
-      vkLogo.classList.remove('active');
+    ScrollTrigger.create({
+      id: 'advantages-title',
+      trigger: item,
+      start: 'top center',
+      end: 'bottom center',
+      scrub: true,
+      onEnter: () => {
+        item.classList.add('advantages__item--active');
+        gsap.to(part, { autoAlpha: 1 });
+      },
+      onLeave: () => {
+        item.classList.remove('advantages__item--active');
+        gsap.to(part, { autoAlpha: 0 });
+      },
+      onEnterBack: () => {
+        item.classList.add('advantages__item--active');
+        gsap.to(part, { autoAlpha: 1 });
+      },
+      onLeaveBack: () => {
+        item.classList.remove('advantages__item--active');
+        gsap.to(part, { autoAlpha: 0 });
+      }
     });
   });
+
+  ScrollTrigger.refresh();
 }
 
 function renderTeam(team) {
@@ -276,7 +257,29 @@ function createTeamCard(member) {
   return article;
 }
 
-function renderPlatform(platform) {
+function initTeamVkLogoHover() {
+  const elements = document.querySelectorAll('.team__item-card');
+
+  elements.forEach((el) => {
+    const vkLogo = el.querySelector('.team__item-vk-logo');
+
+    if (!vkLogo) {
+      return;
+    }
+
+    el.addEventListener('mouseenter', () => {
+      vkLogo.classList.add('active');
+      vkLogo.classList.remove('inactive');
+    });
+
+    el.addEventListener('mouseleave', () => {
+      vkLogo.classList.add('inactive');
+      vkLogo.classList.remove('active');
+    });
+  });
+}
+
+function renderTimeline(platform) {
   const wrapper = document.querySelector('.platform-chart__wrapper');
 
   if (!wrapper || !Array.isArray(platform)) {
@@ -337,12 +340,12 @@ function renderPlatform(platform) {
     chartTitle.textContent = card.year || '';
 
     div.appendChild(chartTitle);
-    div.appendChild(createPlatformCard(card));
+    div.appendChild(createTimelineCard(card));
     wrapper.appendChild(div);
   });
 }
 
-function createPlatformCard(card) {
+function createTimelineCard(card) {
   const div = document.createElement('div');
   div.className = 'platform-chart__col-items';
 
@@ -419,6 +422,76 @@ function createBrandItem(brand) {
   `;
 
   return item;
+}
+
+function renderDirections(directions) {
+  const container = document.querySelector('.directions__list');
+  container.innerHTML = '';
+
+  directions.forEach((direction) => {
+    container.appendChild(createDirectionItem(direction));
+  });
+}
+
+function createDirectionItem(direction) {
+  const article = document.createElement('article');
+  article.className = 'directions__item accordion';
+
+  const divTitle = document.createElement('div');
+  divTitle.className = 'accordion__title';
+
+  const title = document.createElement('span');
+  title.textContent = direction.title;
+
+  divTitle.appendChild(title);
+
+  const divTechs = document.createElement('div');
+  divTechs.className = 'accordion__title-stak-list bages-list';
+
+  direction.technologies.forEach((technology) => {
+    const divTech = document.createElement('div');
+    divTech.className = 'bages-list__item';
+
+    divTech.innerHTML = `
+    <img src="${technology.image || ''}"
+      alt="${technology.name || ''}">
+    ${technology.name || ''}
+    `;
+
+    divTechs.appendChild(divTech);
+  });
+
+  const divToggle = document.createElement('div');
+  divToggle.className = 'accordion__toggle';
+  divToggle.innerHTML = `
+  <svg width="24" height="14" viewBox="0 0 24 14" fill="none"
+    xmlns="http://www.w3.org/2000/svg">
+    <circle cx="2" cy="2" r="2" fill="#507BCE" />
+    <circle cx="7" cy="7" r="2" fill="#507BCE" />
+    <circle cx="12" cy="12" r="2" fill="#507BCE" />
+    <circle cx="17" cy="7" r="2" fill="#507BCE" />
+    <circle cx="22" cy="2" r="2" fill="#507BCE" />
+  </svg>
+  `;
+
+  divTitle.appendChild(divTechs);
+  divTitle.appendChild(divToggle);
+
+  const divDescription = document.createElement('div');
+  divDescription.className = 'accordion__body';
+
+  divDescription.innerHTML = `
+  <div class="accordion__content ustyle">
+    <p>
+      ${direction.description}
+    </p>
+  </div>
+  `;
+
+  article.appendChild(divTitle);
+  article.appendChild(divDescription);
+
+  return article;
 }
 
 function renderVacancies(vacancies) {
@@ -674,8 +747,39 @@ function createGalleryImage(item) {
   return div;
 }
 
-function renderOffices(offices) {
-  const container = document.querySelector('.offices__list');
+function renderWork(work) {
+  const container = document.querySelector('.work__section--scroll');
+  container.innerHTML = '';
+  work.forEach((card) => {
+    container.appendChild(createWorkCard(card))
+  });
+  const lastDiv = document.createElement('div');
+  lastDiv.className = '';
+  lastDiv.innerHTML = `
+  <p>
+    Если твоя команда в другом городе, мы поддерживаем и оплачиваем поездки, чтобы вы могли
+    встретиться и пообщаться лично 
+  </p>
+  `;
+  container.appendChild(lastDiv);
+}
+
+function createWorkCard(card) {
+  const div = document.createElement('div');
+  div.className = 'work__container work__container--type-card';
+  div.innerHTML = `
+  <div class="card card--center card--half-rounded">
+    <img src="${card.image}"
+      alt="TL-Ofice">
+  </div>
+
+  <p class="work__card-text">
+    <span class="work__card-text-line"></span>
+    ${card.text || ''}
+  </p>
+  `;
+
+  return div;
 }
 
 function renderBenefits(benefits) {
@@ -707,4 +811,28 @@ function createBenefitCard(benefit, index) {
   `;
 
   return article;
+}
+
+function renderForm(form) {
+  const container = document.querySelector('.contact-form__description');
+  
+  container.innerHTML = `
+  <h2 class="contact-form__heading heading heading--type-section heading--color-add">
+    ${form[0].title || ''} 
+  </h2>
+
+  <p class="contact-form__description-text">
+    ${form[0].subtitle || ''}
+  </p>
+
+  <div class="contact-form__description-img card card--half-rounded">
+    <video class="video-src" autoplay loop muted playsinline width="595" height="355" preload="auto"
+      src="upload/iblock/424/51ma8fp34r61mqgkgx0y1g5b452uwr2v.mp4"
+      data-src="upload/iblock/424/51ma8fp34r61mqgkgx0y1g5b452uwr2v.mp4"></video>
+  </div>
+  `;
+
+  const button = document.querySelector('.form__submit');
+
+  button.textContent = form[0].button;
 }

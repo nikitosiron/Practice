@@ -72,7 +72,20 @@
       "strategy": "стратегия 1",
       "text": "Описание платформы 1"
     }
-  ],"brands": [
+  ],
+  "brands": [
+    {
+      "id": 1,
+      "name": "Платформа для управления проектами",
+      "image": "local/templates/template1/public/assets/images/brands/catherine-art.svg"
+    },
+    {
+      "id": 1,
+      "name": "Платформа для управления проектами",
+      "image": "local/templates/template1/public/assets/images/brands/catherine-art.svg"
+    }
+  ],
+  "directions": [
     {
       "id": 1,
       "name": "Платформа для управления проектами",
@@ -133,6 +146,23 @@
       "text": "Лена рассказывает студентам, что у нас на работе бесплатные обеды"
     }
   ],
+  "work": [
+    {
+      "id": 1,
+      "image": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
+      "text": "Лена рассказывает студентам, что у нас на работе бесплатные обеды"
+    },
+    {
+      "id": 2,
+      "image": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
+      "text": "Лена рассказывает студентам, что у нас на работе бесплатные обеды"
+    },
+    {
+      "id": 3,
+      "image": "upload/iblock/91d/m0euwozke0u8vke8q63fmtif73qm3vhm.png",
+      "text": "Лена рассказывает студентам, что у нас на работе бесплатные обеды"
+    }
+  ],
   "benefits": [
     {
       "id": 1,
@@ -153,6 +183,14 @@
       "id": 4,
       "title": "Бонусики",
       "description": "Премии и мерчендайзеры, финансовая поддержка от компании на важные жизни. годный бонус на покупку земляники."
+    }
+  ],
+  "form": [
+    {
+      "id": 1,
+      "title": "Дарова",
+      "subtitle": "Фото кота без смс и регистрации",
+      "button": "азегунгарум"
     }
   ]
 }
