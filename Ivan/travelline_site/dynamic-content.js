@@ -4,10 +4,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderHero(data.hero);
     initAdvantagesTitleAnimation();
-    renderTeam(data.team);
+    renderTeam(data.team.filter(function (item) { return item.active !== false; }));
     initTeamVkLogoHover();
-    renderVacancies(data.vacancies); 
-    renderBenefits(data.benefits);
+    renderVacancies(data.vacancies.filter(function (item) { return item.active !== false; }));
+    renderBenefits(data.benefits.filter(function (item) { return item.active !== false; }));
   } catch (error) {
     console.error('Ошибка загрузки динамического контента:', error);
   }

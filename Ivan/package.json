@@ -1,11 +1,11 @@
 {
-  "name": "nikita",
+  "name": "travelline-admin",
   "version": "1.0.0",
-  "description": "",
+  "description": "Мини-конструктор сайта travelline.tech — админ-панель",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test tests/dataService.test.js"
   },
   "keywords": [],
   "author": "",

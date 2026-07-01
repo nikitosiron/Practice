@@ -54,7 +54,8 @@ async function addTeamMember(member) {
         name: member.name,
         position: member.position,
         photo: member.photo ?? '',
-        vk: member.vk ?? '#'
+        vk: member.vk ?? '#',
+        active: member.active !== false
     };
     data.team.push(newMember);
     await writeData(data);
@@ -73,8 +74,9 @@ async function updateTeamMember(id, member) {
         name: member.name,
         position: member.position,
         photo: member.photo ?? data.team[index].photo,
-        vk: member.vk ?? data.team[index].vk
-    }
+        vk: member.vk ?? data.team[index].vk,
+        active: member.active !== false
+    };
     data.team[index] = updated;
     await writeData(data);
     return updated;
@@ -119,6 +121,7 @@ async function addVacancy(vacancy) {
         title: vacancy.title,
         format: vacancy.format,
         url: vacancy.url,
+        active: vacancy.active !== false
     };
     data.vacancies.push(newVacancy);
     await writeData(data);
@@ -137,6 +140,7 @@ async function updateVacancy(id, vacancy) {
         title: vacancy.title,
         format: vacancy.format,
         url: vacancy.url,
+        active: vacancy.active !== false
     };
     data.vacancies[index] = updated;
     await writeData(data);
@@ -173,6 +177,7 @@ async function addBenefit(benefit) {
         id: getNextId(data.benefits),
         title: benefit.title,
         description: benefit.description,
+        active: benefit.active !== false
     };
     data.benefits.push(newBenefit);
     await writeData(data);
@@ -190,6 +195,7 @@ async function updateBenefit(id, benefit) {
         ...data.benefits[index],
         title: benefit.title,
         description: benefit.description,
+        active: benefit.active !== false
     };
     data.benefits[index] = updated;
     await writeData(data);
@@ -207,9 +213,70 @@ async function deleteBenefit(id) {
     return removed;
 }
 
+function validatePosition(position) {
+    if (!position || typeof position !== 'object') {
+        throw validationError('Тело запроса должно быть объектом должности');
+    }
+    if (typeof position.title !== 'string' || position.title.trim() === '') {
+        throw validationError('Поле title обязательно и должно быть непустой строкой');
+    }
+}
+
+async function getPositions() {
+    const data = await readData();
+    return data.positions || [];
+}
+
+async function addPosition(position) {
+    validatePosition(position);
+    const data = await readData();
+    if (!data.positions) data.positions = [];
+    const newPosition = {
+        id: getNextId(data.positions),
+        title: position.title.trim()
+    };
+    data.positions.push(newPosition);
+    await writeData(data);
+    return newPosition;
+}
+
+async function updatePosition(id, position) {
+    validatePosition(position);
+    const data = await readData();
+    if (!data.positions) data.positions = [];
+    const index = data.positions.findIndex(p => p.id === id);
+    if (index === -1) {
+        throw notFoundError(`Должность с id=${id} не найдена`);
+    }
+    const updated = {
+        ...data.positions[index],
+        title: position.title.trim()
+    };
+    data.positions[index] = updated;
+    await writeData(data);
+    return updated;
+}
+
+async function deletePosition(id) {
+    const data = await readData();
+    if (!data.positions) data.positions = [];
+    const index = data.positions.findIndex(p => p.id === id);
+    if (index === -1) {
+        throw notFoundError(`Должность с id=${id} не найдена`);
+    }
+    const usedBy = data.team.filter(m => m.position === data.positions[index].title);
+    if (usedBy.length > 0) {
+        throw validationError('Нельзя удалить должность, которая используется у сотрудников (' + usedBy.map(m => m.name).join(', ') + ')');
+    }
+    const [removed] = data.positions.splice(index, 1);
+    await writeData(data);
+    return removed;
+}
+
 module.exports = {
     getNextId, updateHero, validationError, notFoundError,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addVacancy, updateVacancy, deleteVacancy,
-    addBenefit, updateBenefit, deleteBenefit
+    addBenefit, updateBenefit, deleteBenefit,
+    getPositions, addPosition, updatePosition, deletePosition
 };
