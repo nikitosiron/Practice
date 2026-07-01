@@ -1,5 +1,3 @@
-// Показывает сообщение в строке статуса под заголовком админки.
-// message — текст, type — 'success' или 'error' (влияет на цвет через CSS).
 function showStatus(message, type) {
     if (type === undefined) {
         type = 'success';
@@ -12,8 +10,6 @@ function showStatus(message, type) {
     status.className = 'status ' + type;
 }
 
-// Универсальный fetch-обёртка для POST/PUT/DELETE/GET с JSON-телом.
-// Возвращает промис response (как обычный fetch).
 function apiRequest(method, url, data) {
     var options = { method: method };
     if (data !== undefined) {
@@ -23,7 +19,19 @@ function apiRequest(method, url, data) {
     return fetch(url, options);
 }
 
-// Загружает все данные сайта с сервера и раскладывает их по секциям админки.
+function parseApiResponse(response) {
+    return response.json().then(function (body) {
+        if (!body.success) {
+            throw new Error(body.message || 'Сервер ответил ошибкой');
+        }
+        return body;
+    });
+}
+
+var cachedPositions = [];
+var cachedTeam = [];
+var cachedVacancies = [];
+
 function loadData() {
     fetch('/api/data')
         .then(function (response) {
@@ -33,34 +41,34 @@ function loadData() {
             return response.json();
         })
         .then(function (data) {
+            cachedPositions = data.positions || [];
+            cachedTeam = data.team || [];
+            cachedVacancies = data.vacancies || [];
+
             renderHeroForm(data.hero);
-            renderTeam(data.team);
-            renderVacancies(data.vacancies);
+            renderTeam(cachedTeam);
+            renderVacancies(cachedVacancies);
             renderBenefits(data.benefits);
+            renderPositions(cachedPositions);
             updateStatCards(data);
-            isDirty = false;  // данные свежие — состояние формы чистое
+            isDirty = false;
         })
         .catch(function (error) {
             showStatus('Ошибка загрузки: ' + error.message, 'error');
         });
 }
 
-// ─── Навигация и UI-обвязка ────────────────────────────────
-
-// Состояние: грязная ли форма (есть ли несохранённые изменения).
 var isDirty = false;
 
-// Метки для хлебной крошки и stat-карточки "Активный блок".
 var sectionLabels = {
-    hero: 'Hero',
-    team: 'Команда',
+    hero: 'О нас',
+    team: 'Сотрудники',
+    positions: 'Должности',
     vacancies: 'Вакансии',
     benefits: 'Плюшки'
 };
 
-// Переключает видимый блок и обновляет nav/breadcrumb/stat.
 function switchSection(name) {
-    // Все .block — скрыть, .nav-item — снять active.
     var blocks = document.querySelectorAll('.block');
     for (var i = 0; i < blocks.length; i++) {
         blocks[i].classList.remove('active');
@@ -70,25 +78,21 @@ function switchSection(name) {
         navItems[j].classList.remove('active');
     }
 
-    // Включить нужный блок и nav-item.
     var block = document.querySelector('.block[data-block="' + name + '"]');
     var navItem = document.querySelector('.nav-item[data-section="' + name + '"]');
     if (block) block.classList.add('active');
     if (navItem) navItem.classList.add('active');
 
-    // Обновить breadcrumb и stat-карточку.
     document.querySelector('#breadcrumb').textContent = sectionLabels[name] || name;
     document.querySelector('#stat-active').textContent = sectionLabels[name] || name;
 }
 
-// Вешает обработчики на кнопки сайдбара.
 function wireSidebar() {
     var navItems = document.querySelectorAll('.nav-item[data-section]');
     for (var i = 0; i < navItems.length; i++) {
         navItems[i].addEventListener('click', function () {
             var target = this.getAttribute('data-section');
 
-            // Если форма грязная — предупреждаем при переключении.
             if (isDirty) {
                 if (!confirm('Есть несохранённые изменения. Переключиться без сохранения?')) {
                     return;
@@ -101,18 +105,15 @@ function wireSidebar() {
     }
 }
 
-// Обновляет счётчики в stat-карточках после loadData.
 function updateStatCards(data) {
     document.querySelector('#stat-team').textContent = data.team.length;
     document.querySelector('#stat-vacancies').textContent = data.vacancies.length;
     document.querySelector('#stat-benefits').textContent = data.benefits.length;
 }
 
-// Отслеживает изменения в формах — выставляет isDirty = true.
-// Слушаем на body через делегирование: ловим любой input/change в любом поле.
 function wireDirtyTracking() {
     document.body.addEventListener('input', function (event) {
-        if (event.target.matches('input, textarea')) {
+        if (event.target.matches('input, textarea, select')) {
             isDirty = true;
         }
     });
@@ -147,7 +148,7 @@ function buildStatRow(stat) {
     row.appendChild(label);
 
     var del = document.createElement('button');
-    del.className = 'btn danger';
+    del.className = 'btn danger small';
     del.textContent = 'Удалить';
     del.addEventListener('click', function () {
         row.remove();
@@ -174,7 +175,7 @@ function saveHero() {
     var data = collectHeroData();
 
     if (data.title.trim() === '') {
-        showStatus('Заполните заголовок Hero', 'error');
+        showStatus('Заполните заголовок', 'error');
         return;
     }
     for (var i = 0; i < data.stats.length; i++) {
@@ -185,10 +186,7 @@ function saveHero() {
     }
 
     apiRequest('PUT', '/api/hero', data)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Сохранено');
             isDirty = false;
@@ -205,9 +203,8 @@ function addStat() {
     row.querySelector('.stats-value').focus();
 }
 
-// ─── Универсальные хелперы для карточек ────────────────────
+// ─── Универсальные хелперы ──────────────────────────────────
 
-// Создаёт пару <label> + <input>, возвращает фрагмент.
 function buildField(labelText, extraClasses, value, dataSocial) {
     var fragment = document.createDocumentFragment();
 
@@ -228,20 +225,53 @@ function buildField(labelText, extraClasses, value, dataSocial) {
     return fragment;
 }
 
-// Создаёт пару кнопок "Сохранить" и "Удалить".
-// onSave и onDelete — функции-обработчики кликов.
+function buildSelectField(labelText, extraClasses, currentValue, options) {
+    var fragment = document.createDocumentFragment();
+
+    var label = document.createElement('label');
+    label.className = 'field-label';
+    label.textContent = labelText;
+
+    var select = document.createElement('select');
+    select.className = 'field-input' + (extraClasses ? ' ' + extraClasses : '');
+
+    var hasMatch = false;
+    for (var i = 0; i < options.length; i++) {
+        var opt = document.createElement('option');
+        opt.value = options[i];
+        opt.textContent = options[i];
+        if (options[i] === currentValue) {
+            opt.selected = true;
+            hasMatch = true;
+        }
+        select.appendChild(opt);
+    }
+
+    if (!hasMatch && currentValue) {
+        var customOpt = document.createElement('option');
+        customOpt.value = currentValue;
+        customOpt.textContent = currentValue;
+        customOpt.selected = true;
+        select.insertBefore(customOpt, select.firstChild);
+    }
+
+    fragment.appendChild(label);
+    fragment.appendChild(select);
+    return fragment;
+}
+
 function buildCardActions(onSave, onDelete) {
     var actions = document.createElement('div');
     actions.className = 'card-actions';
 
     var save = document.createElement('button');
-    save.className = 'btn primary';
+    save.className = 'btn primary small';
     save.textContent = 'Сохранить';
     save.addEventListener('click', onSave);
     actions.appendChild(save);
 
     var del = document.createElement('button');
-    del.className = 'btn danger';
+    del.className = 'btn danger small';
     del.textContent = 'Удалить';
     del.addEventListener('click', onDelete);
     actions.appendChild(del);
@@ -249,9 +279,64 @@ function buildCardActions(onSave, onDelete) {
     return actions;
 }
 
+function buildActiveBadge(active) {
+    var badge = document.createElement('span');
+    var isActive = active !== false;
+    badge.className = 'badge ' + (isActive ? 'badge-active' : 'badge-inactive');
+    badge.textContent = isActive ? 'Активен' : 'Неактивен';
+    return badge;
+}
+
+function buildToggleButton(active, onToggle) {
+    var btn = document.createElement('button');
+    var isActive = active !== false;
+    btn.className = 'btn status-btn small';
+    btn.textContent = isActive ? 'Деактивировать' : 'Активировать';
+    btn.addEventListener('click', onToggle);
+    return btn;
+}
+
 // ─── Команда ────────────────────────────────────────────────
 
+function getTeamViewMode() {
+    return localStorage.getItem('teamViewMode') || 'cards';
+}
+
+function setTeamViewMode(mode) {
+    localStorage.setItem('teamViewMode', mode);
+}
+
+function filterTeam(team, query) {
+    if (!query) return team;
+    var q = query.toLowerCase();
+    return team.filter(function (m) {
+        return (m.name && m.name.toLowerCase().indexOf(q) !== -1) ||
+               (m.position && m.position.toLowerCase().indexOf(q) !== -1);
+    });
+}
+
 function renderTeam(team) {
+    var query = document.querySelector('#team-search').value;
+    var filtered = filterTeam(team, query);
+    var mode = getTeamViewMode();
+
+    var cardsList = document.querySelector('#team-list');
+    var tableWrap = document.querySelector('#team-table-wrap');
+
+    if (mode === 'table') {
+        cardsList.style.display = 'none';
+        tableWrap.style.display = 'block';
+        renderTeamTable(filtered);
+    } else {
+        cardsList.style.display = '';
+        tableWrap.style.display = 'none';
+        renderTeamCards(filtered);
+    }
+
+    updateViewToggle(mode);
+}
+
+function renderTeamCards(team) {
     var list = document.querySelector('#team-list');
     list.innerHTML = '';
     for (var i = 0; i < team.length; i++) {
@@ -259,18 +344,111 @@ function renderTeam(team) {
     }
 }
 
+function renderTeamTable(team) {
+    var tbody = document.querySelector('#team-table-body');
+    tbody.innerHTML = '';
+    for (var i = 0; i < team.length; i++) {
+        tbody.appendChild(buildTeamRow(team[i]));
+    }
+}
+
+function updateViewToggle(mode) {
+    var cardsBtn = document.querySelector('#view-cards');
+    var tableBtn = document.querySelector('#view-table');
+    if (mode === 'table') {
+        cardsBtn.classList.remove('active');
+        tableBtn.classList.add('active');
+    } else {
+        cardsBtn.classList.add('active');
+        tableBtn.classList.remove('active');
+    }
+}
+
+function buildPositionOptions() {
+    var opts = [];
+    for (var i = 0; i < cachedPositions.length; i++) {
+        opts.push(cachedPositions[i].title);
+    }
+    return opts;
+}
+
+function buildInlinePositionAdd(card) {
+    var wrap = document.createElement('div');
+    wrap.className = 'inline-add';
+    wrap.style.display = 'none';
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'field-input';
+    input.placeholder = 'Новая должность...';
+    wrap.appendChild(input);
+
+    var saveBtn = document.createElement('button');
+    saveBtn.className = 'btn primary small';
+    saveBtn.textContent = 'Добавить';
+    saveBtn.addEventListener('click', function () {
+        var title = input.value.trim();
+        if (!title) {
+            showStatus('Введите название должности', 'error');
+            return;
+        }
+        apiRequest('POST', '/api/positions', { title: title })
+            .then(parseApiResponse)
+            .then(function (body) {
+                cachedPositions.push(body.data);
+                var select = card.querySelector('.team__item-description');
+                if (select) {
+                    var opt = document.createElement('option');
+                    opt.value = body.data.title;
+                    opt.textContent = body.data.title;
+                    opt.selected = true;
+                    select.appendChild(opt);
+                }
+                wrap.style.display = 'none';
+                input.value = '';
+                showStatus('Должность добавлена');
+            })
+            .catch(function (error) {
+                showStatus('Ошибка: ' + error.message, 'error');
+            });
+    });
+    wrap.appendChild(saveBtn);
+
+    return wrap;
+}
+
 function buildTeamCard(member, index) {
     var card = document.createElement('div');
     card.className = 'card card--rounded team__item team__item-card';
     card.dataset.id = member.id;
+    if (member.active === false) card.classList.add('inactive');
+
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
 
     var title = document.createElement('h3');
     title.className = 'card-title';
     title.textContent = 'Сотрудник #' + index;
-    card.appendChild(title);
+    title.style.margin = '0';
+    header.appendChild(title);
+
+    header.appendChild(buildActiveBadge(member.active));
+    card.appendChild(header);
 
     card.appendChild(buildField('Имя', 'team__item-title', member.name));
-    card.appendChild(buildField('Должность', 'team__item-description', member.position));
+    card.appendChild(buildSelectField('Должность', 'team__item-description', member.position, buildPositionOptions()));
+
+    var addPosBtn = document.createElement('button');
+    addPosBtn.className = 'btn small';
+    addPosBtn.textContent = '+ Новая должность';
+    addPosBtn.style.marginTop = '4px';
+    var inlineAdd = buildInlinePositionAdd(card);
+    addPosBtn.addEventListener('click', function () {
+        inlineAdd.style.display = inlineAdd.style.display === 'none' ? 'flex' : 'none';
+    });
+    card.appendChild(addPosBtn);
+    card.appendChild(inlineAdd);
+
     card.appendChild(buildField('Фото (путь)', 'team__item-image card__image', member.photo));
 
     var socials = document.createElement('div');
@@ -278,12 +456,83 @@ function buildTeamCard(member, index) {
     socials.appendChild(buildField('VK', '', member.vk, 'vk'));
     card.appendChild(socials);
 
-    // Обработчики save/delete используют замыкания на member.id и card.
-    card.appendChild(buildCardActions(
-        function () { saveTeamMember(member.id, card); },
-        function () { deleteTeamMember(member.id); }
-    ));
+    var actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.className = 'btn primary small';
+    saveBtn.textContent = 'Сохранить';
+    saveBtn.addEventListener('click', function () { saveTeamMember(member.id, card); });
+    actions.appendChild(saveBtn);
+
+    actions.appendChild(buildToggleButton(member.active, function () {
+        toggleTeamMemberActive(member.id, card, member.active !== false);
+    }));
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn danger small';
+    delBtn.textContent = 'Удалить';
+    delBtn.addEventListener('click', function () { deleteTeamMember(member.id); });
+    actions.appendChild(delBtn);
+
+    card.appendChild(actions);
     return card;
+}
+
+function buildTeamRow(member) {
+    var tr = document.createElement('tr');
+    if (member.active === false) tr.style.opacity = '0.6';
+
+    var tdPhoto = document.createElement('td');
+    var img = document.createElement('img');
+    img.className = 'table-photo';
+    img.src = resolveSitePath(member.photo || 'upload/placeholder-avatar.svg');
+    img.alt = member.name;
+    tdPhoto.appendChild(img);
+    tr.appendChild(tdPhoto);
+
+    var tdName = document.createElement('td');
+    tdName.textContent = member.name;
+    tdName.className = 'table-cell-name';
+    tr.appendChild(tdName);
+
+    var tdPos = document.createElement('td');
+    tdPos.textContent = member.position;
+    tdPos.className = 'table-cell-position';
+    tr.appendChild(tdPos);
+
+    var tdStatus = document.createElement('td');
+    tdStatus.appendChild(buildActiveBadge(member.active));
+    tr.appendChild(tdStatus);
+
+    var tdActions = document.createElement('td');
+    var actionsDiv = document.createElement('div');
+    actionsDiv.className = 'table-actions';
+
+    var editBtn = document.createElement('button');
+    editBtn.className = 'btn small';
+    editBtn.textContent = 'Редактировать';
+    editBtn.addEventListener('click', function () {
+        switchSection('team');
+        setTeamViewMode('cards');
+        renderTeam(cachedTeam);
+    });
+    actionsDiv.appendChild(editBtn);
+
+    actionsDiv.appendChild(buildToggleButton(member.active, function () {
+        toggleTeamMemberActive(member.id, null, member.active !== false);
+    }));
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn danger small';
+    delBtn.textContent = 'Удалить';
+    delBtn.addEventListener('click', function () { deleteTeamMember(member.id); });
+    actionsDiv.appendChild(delBtn);
+
+    tdActions.appendChild(actionsDiv);
+    tr.appendChild(tdActions);
+
+    return tr;
 }
 
 function collectTeamData(card) {
@@ -297,6 +546,8 @@ function collectTeamData(card) {
 
 function saveTeamMember(id, card) {
     var data = collectTeamData(card);
+    var member = findById(cachedTeam, id);
+    data.active = member ? member.active !== false : true;
 
     if (data.name.trim() === '' || data.position.trim() === '' || data.photo.trim() === '') {
         showStatus('Заполните имя, должность и фото сотрудника', 'error');
@@ -304,33 +555,52 @@ function saveTeamMember(id, card) {
     }
 
     apiRequest('PUT', '/api/team/' + id, data)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Сотрудник сохранён');
             isDirty = false;
+            loadData();
         })
         .catch(function (error) {
             showStatus('Ошибка сохранения: ' + error.message, 'error');
         });
 }
 
+function toggleTeamMemberActive(id, card, currentlyActive) {
+    var member = findById(cachedTeam, id);
+    if (!member) return;
+
+    var data = {
+        name: member.name,
+        position: member.position,
+        photo: member.photo,
+        vk: member.vk,
+        active: !currentlyActive
+    };
+
+    apiRequest('PUT', '/api/team/' + id, data)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus(currentlyActive ? 'Сотрудник деактивирован' : 'Сотрудник активирован');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка: ' + error.message, 'error');
+        });
+}
+
 function addTeamMember() {
     apiRequest('POST', '/api/team', {
         name: 'Новый сотрудник',
-        position: 'Должность',
+        position: cachedPositions.length > 0 ? cachedPositions[0].title : 'Должность',
         photo: 'upload/placeholder-avatar.svg',
-        vk: '#'
+        vk: '#',
+        active: true
     })
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Сотрудник добавлен');
-            loadData();  // перерисуем список с актуальными данными
+            loadData();
         })
         .catch(function (error) {
             showStatus('Ошибка добавления: ' + error.message, 'error');
@@ -343,9 +613,7 @@ function deleteTeamMember(id) {
     }
 
     apiRequest('DELETE', '/api/team/' + id)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Сотрудник удалён');
             loadData();
@@ -357,11 +625,21 @@ function deleteTeamMember(id) {
 
 // ─── Вакансии ───────────────────────────────────────────────
 
+function filterVacancies(vacancies, query) {
+    if (!query) return vacancies;
+    var q = query.toLowerCase();
+    return vacancies.filter(function (v) {
+        return v.title && v.title.toLowerCase().indexOf(q) !== -1;
+    });
+}
+
 function renderVacancies(vacancies) {
+    var query = document.querySelector('#vacancies-search').value;
+    var filtered = filterVacancies(vacancies, query);
     var list = document.querySelector('#vacancies-list');
     list.innerHTML = '';
-    for (var i = 0; i < vacancies.length; i++) {
-        list.appendChild(buildVacancyCard(vacancies[i], i + 1));
+    for (var i = 0; i < filtered.length; i++) {
+        list.appendChild(buildVacancyCard(filtered[i], i + 1));
     }
 }
 
@@ -369,20 +647,44 @@ function buildVacancyCard(vacancy, index) {
     var card = document.createElement('div');
     card.className = 'card card--half-rounded vacancies__item';
     card.dataset.id = vacancy.id;
+    if (vacancy.active === false) card.classList.add('inactive');
+
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
 
     var title = document.createElement('h3');
     title.className = 'card-title';
     title.textContent = 'Вакансия #' + index;
-    card.appendChild(title);
+    title.style.margin = '0';
+    header.appendChild(title);
+
+    header.appendChild(buildActiveBadge(vacancy.active));
+    card.appendChild(header);
 
     card.appendChild(buildField('Название', 'vacancies__item-title card__title heading heading--type-card', vacancy.title));
     card.appendChild(buildField('Формат / город', 'vacancies__item-address card__address', vacancy.format));
     card.appendChild(buildField('Ссылка на hh.ru', 'vacancies__item-lik card__footer-link', vacancy.url));
 
-    card.appendChild(buildCardActions(
-        function () { saveVacancy(vacancy.id, card); },
-        function () { deleteVacancy(vacancy.id); }
-    ));
+    var actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.className = 'btn primary small';
+    saveBtn.textContent = 'Сохранить';
+    saveBtn.addEventListener('click', function () { saveVacancy(vacancy.id, card); });
+    actions.appendChild(saveBtn);
+
+    actions.appendChild(buildToggleButton(vacancy.active, function () {
+        toggleVacancyActive(vacancy.id, vacancy.active !== false);
+    }));
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn danger small';
+    delBtn.textContent = 'Удалить';
+    delBtn.addEventListener('click', function () { deleteVacancy(vacancy.id); });
+    actions.appendChild(delBtn);
+
+    card.appendChild(actions);
     return card;
 }
 
@@ -396,6 +698,8 @@ function collectVacancyData(card) {
 
 function saveVacancy(id, card) {
     var data = collectVacancyData(card);
+    var vacancy = findById(cachedVacancies, id);
+    data.active = vacancy ? vacancy.active !== false : true;
 
     if (data.title.trim() === '' || data.format.trim() === '' || data.url.trim() === '') {
         showStatus('Заполните все поля вакансии', 'error');
@@ -403,16 +707,36 @@ function saveVacancy(id, card) {
     }
 
     apiRequest('PUT', '/api/vacancies/' + id, data)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Вакансия сохранена');
             isDirty = false;
+            loadData();
         })
         .catch(function (error) {
             showStatus('Ошибка сохранения: ' + error.message, 'error');
+        });
+}
+
+function toggleVacancyActive(id, currentlyActive) {
+    var vacancy = findById(cachedVacancies, id);
+    if (!vacancy) return;
+
+    var data = {
+        title: vacancy.title,
+        format: vacancy.format,
+        url: vacancy.url,
+        active: !currentlyActive
+    };
+
+    apiRequest('PUT', '/api/vacancies/' + id, data)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus(currentlyActive ? 'Вакансия деактивирована' : 'Вакансия активирована');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка: ' + error.message, 'error');
         });
 }
 
@@ -420,12 +744,10 @@ function addVacancy() {
     apiRequest('POST', '/api/vacancies', {
         title: 'Новая вакансия',
         format: 'удаленно',
-        url: 'https://hh.ru'
+        url: 'https://hh.ru',
+        active: true
     })
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Вакансия добавлена');
             loadData();
@@ -441,9 +763,7 @@ function deleteVacancy(id) {
     }
 
     apiRequest('DELETE', '/api/vacancies/' + id)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Вакансия удалена');
             loadData();
@@ -467,11 +787,19 @@ function buildBenefitCard(benefit, index) {
     var card = document.createElement('div');
     card.className = 'card card--default bonus__item bonus__item--' + index;
     card.dataset.id = benefit.id;
+    if (benefit.active === false) card.classList.add('inactive');
+
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
 
     var title = document.createElement('h3');
     title.className = 'card-title';
     title.textContent = 'Бонус #' + index;
-    card.appendChild(title);
+    title.style.margin = '0';
+    header.appendChild(title);
+
+    header.appendChild(buildActiveBadge(benefit.active));
+    card.appendChild(header);
 
     card.appendChild(buildField('Название', 'bonus__item-title card__text', benefit.title));
 
@@ -486,10 +814,26 @@ function buildBenefitCard(benefit, index) {
     desc.value = benefit.description;
     card.appendChild(desc);
 
-    card.appendChild(buildCardActions(
-        function () { saveBenefit(benefit.id, card); },
-        function () { deleteBenefit(benefit.id); }
-    ));
+    var actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.className = 'btn primary small';
+    saveBtn.textContent = 'Сохранить';
+    saveBtn.addEventListener('click', function () { saveBenefit(benefit.id, card); });
+    actions.appendChild(saveBtn);
+
+    actions.appendChild(buildToggleButton(benefit.active, function () {
+        toggleBenefitActive(benefit.id, benefit.active !== false);
+    }));
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn danger small';
+    delBtn.textContent = 'Удалить';
+    delBtn.addEventListener('click', function () { deleteBenefit(benefit.id); });
+    actions.appendChild(delBtn);
+
+    card.appendChild(actions);
     return card;
 }
 
@@ -508,29 +852,57 @@ function saveBenefit(id, card) {
         return;
     }
 
-    apiRequest('PUT', '/api/benefits/' + id, data)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
-        .then(function () {
-            showStatus('Бонус сохранён');
-            isDirty = false;
+    fetch('/api/data')
+        .then(function (r) { return r.json(); })
+        .then(function (allData) {
+            var b = findById(allData.benefits, id);
+            data.active = b ? b.active !== false : true;
+
+            return apiRequest('PUT', '/api/benefits/' + id, data)
+                .then(parseApiResponse)
+                .then(function () {
+                    showStatus('Бонус сохранён');
+                    isDirty = false;
+                    loadData();
+                });
         })
         .catch(function (error) {
             showStatus('Ошибка сохранения: ' + error.message, 'error');
         });
 }
 
+function toggleBenefitActive(id, currentlyActive) {
+    fetch('/api/data')
+        .then(function (r) { return r.json(); })
+        .then(function (allData) {
+            var benefit = findById(allData.benefits, id);
+            if (!benefit) return;
+
+            var data = {
+                title: benefit.title,
+                description: benefit.description,
+                active: !currentlyActive
+            };
+
+            return apiRequest('PUT', '/api/benefits/' + id, data)
+                .then(parseApiResponse)
+                .then(function () {
+                    showStatus(currentlyActive ? 'Бонус деактивирован' : 'Бонус активирован');
+                    loadData();
+                });
+        })
+        .catch(function (error) {
+            showStatus('Ошибка: ' + error.message, 'error');
+        });
+}
+
 function addBenefit() {
     apiRequest('POST', '/api/benefits', {
         title: 'Новый бонус',
-        description: 'Описание бонуса'
+        description: 'Описание бонуса',
+        active: true
     })
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-            return response.json();
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Бонус добавлен');
             loadData();
@@ -546,9 +918,7 @@ function deleteBenefit(id) {
     }
 
     apiRequest('DELETE', '/api/benefits/' + id)
-        .then(function (response) {
-            if (!response.ok) throw new Error('Сервер ответил ошибкой');
-        })
+        .then(parseApiResponse)
         .then(function () {
             showStatus('Бонус удалён');
             loadData();
@@ -556,6 +926,105 @@ function deleteBenefit(id) {
         .catch(function (error) {
             showStatus('Ошибка удаления: ' + error.message, 'error');
         });
+}
+
+// ─── Должности ──────────────────────────────────────────────
+
+function renderPositions(positions) {
+    var list = document.querySelector('#positions-list');
+    list.innerHTML = '';
+    for (var i = 0; i < positions.length; i++) {
+        list.appendChild(buildPositionCard(positions[i], i + 1));
+    }
+}
+
+function buildPositionCard(position, index) {
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = position.id;
+
+    var title = document.createElement('h3');
+    title.className = 'card-title';
+    title.textContent = 'Должность #' + index;
+    card.appendChild(title);
+
+    card.appendChild(buildField('Название', 'position-title', position.title));
+
+    card.appendChild(buildCardActions(
+        function () { savePosition(position.id, card); },
+        function () { deletePosition(position.id); }
+    ));
+    return card;
+}
+
+function savePosition(id, card) {
+    var title = card.querySelector('.position-title').value;
+
+    if (title.trim() === '') {
+        showStatus('Введите название должности', 'error');
+        return;
+    }
+
+    apiRequest('PUT', '/api/positions/' + id, { title: title })
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Должность сохранена');
+            isDirty = false;
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка сохранения: ' + error.message, 'error');
+        });
+}
+
+function addPosition() {
+    apiRequest('POST', '/api/positions', { title: 'Новая должность' })
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Должность добавлена');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка добавления: ' + error.message, 'error');
+        });
+}
+
+function deletePosition(id) {
+    if (!confirm('Удалить должность?')) {
+        return;
+    }
+
+    apiRequest('DELETE', '/api/positions/' + id)
+        .then(parseApiResponse)
+        .then(function () {
+            showStatus('Должность удалена');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка удаления: ' + error.message, 'error');
+        });
+}
+
+// ─── Утилиты ────────────────────────────────────────────────
+
+// Пути к фото сотрудников в data.json относительные ("upload/...") и
+// рассчитаны на публичную страницу, открытую с корня сайта. Админка
+// открыта на /admin/, поэтому такой относительный путь резолвится
+// браузером неверно (/admin/upload/...) — добавляем ведущий слэш,
+// чтобы путь всегда резолвился от корня сайта.
+function resolveSitePath(src) {
+    if (!src) return src;
+    if (/^(https?:)?\/\//.test(src) || src.indexOf('/') === 0) {
+        return src;
+    }
+    return '/' + src;
+}
+
+function findById(arr, id) {
+    for (var i = 0; i < arr.length; i++) {
+        if (arr[i].id === id) return arr[i];
+    }
+    return null;
 }
 
 // ─── Привязка статических кнопок ────────────────────────────
@@ -566,11 +1035,34 @@ function wireStaticButtons() {
     document.querySelector('#team-add').addEventListener('click', addTeamMember);
     document.querySelector('#vacancies-add').addEventListener('click', addVacancy);
     document.querySelector('#benefits-add').addEventListener('click', addBenefit);
+    document.querySelector('#positions-add').addEventListener('click', addPosition);
+}
+
+function wireViewToggle() {
+    document.querySelector('#view-cards').addEventListener('click', function () {
+        setTeamViewMode('cards');
+        renderTeam(cachedTeam);
+    });
+    document.querySelector('#view-table').addEventListener('click', function () {
+        setTeamViewMode('table');
+        renderTeam(cachedTeam);
+    });
+}
+
+function wireSearch() {
+    document.querySelector('#team-search').addEventListener('input', function () {
+        renderTeam(cachedTeam);
+    });
+    document.querySelector('#vacancies-search').addEventListener('input', function () {
+        renderVacancies(cachedVacancies);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function () {
     wireStaticButtons();
     wireSidebar();
     wireDirtyTracking();
+    wireViewToggle();
+    wireSearch();
     loadData();
 });

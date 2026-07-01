@@ -6,6 +6,7 @@ const {
     addTeamMember, updateTeamMember, deleteTeamMember,
     addVacancy, updateVacancy, deleteVacancy,
     addBenefit, updateBenefit, deleteBenefit,
+    addPosition, updatePosition, deletePosition,
 } = require('./src/dataService');
 
 const app = express();
@@ -18,6 +19,7 @@ app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.get('/api/data', async (req, res) => {
     try {
         const data = await readData();
+        if (!data.positions) data.positions = [];
         res.json(data);
     } catch (err) {
         console.error('Ошибка чтения data.json:', err);
@@ -163,6 +165,60 @@ app.delete('/api/benefits/:id', async (req, res) => {
         res.json({ success: true, data: removed });
     } catch (err) {
         console.error('DELETE /api/benefits/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.get('/api/positions', async (req, res) => {
+    try {
+        const data = await readData();
+        res.json({ success: true, data: data.positions || [] });
+    } catch (err) {
+        console.error('GET /api/positions:', err);
+        res.status(500).json({ success: false, message: 'Внутренняя ошибка сервера' });
+    }
+});
+
+app.post('/api/positions', async (req, res) => {
+    try {
+        const created = await addPosition(req.body);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        console.error('POST /api/positions:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.put('/api/positions/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const updated = await updatePosition(id, req.body);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('PUT /api/positions/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.delete('/api/positions/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const removed = await deletePosition(id);
+        res.json({ success: true, data: removed });
+    } catch (err) {
+        console.error('DELETE /api/positions/:id:', err);
         const status = err.status || 500;
         const message = err.status ? err.message : 'Внутренняя ошибка сервера';
         res.status(status).json({ success: false, message });

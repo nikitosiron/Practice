@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { getNextId, addTeamMember, updateHero, addVacancy, addBenefit } = require('../src/dataService');
+const { getNextId, addTeamMember, updateHero, addVacancy, addBenefit, addPosition } = require('../src/dataService');
 
 test('getNextId: пустой массив -> 1', () => {
     assert.strictEqual(getNextId([]), 1);
@@ -77,6 +77,20 @@ test('addBenefit: без description -> 400', async () => {
 test('addBenefit: description из пробелов -> 400', async () => {
     await assert.rejects(
         () => addBenefit({ title: 'Спорт', description: '   ' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addPosition: без title -> 400', async () => {
+    await assert.rejects(
+        () => addPosition({}),
+        (err) => err.status === 400
+    );
+});
+
+test('addPosition: title из пробелов -> 400', async () => {
+    await assert.rejects(
+        () => addPosition({ title: '   ' }),
         (err) => err.status === 400
     );
 });
