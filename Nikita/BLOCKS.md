@@ -75,17 +75,20 @@ team[]: {
 ```js
 timeline[]: {
   id,
+  type,           // string, обязательное (например "product" | "event" | "milestone" — enum не жёсткий, свободный)
   year,           // number, целое 1990–2100
-  name,           // string
-  category,       // enum: "B2B" | "B2C" | "B2E"
-  subtitle,       // string
-  description,    // string
+  mark,           // string, ОПЦИОНАЛЬНОЕ (метка/значок, например "Флагман"); дефолт ""
+  title,          // string, обязательное
+  subtitle,       // string, обязательное
+  strategy,       // enum: "B2B" | "B2C" | "B2E" (бывший category — стратегический сегмент)
+  text,           // string, обязательное (бывший description)
   active
 }
 ```
 
 - Сортировать в рендере по `year` ↑.
-- Иконки продукта в контракте нет — фронт держит `Map<name, svg>` (или ретрофитим `iconKey` позже).
+- Иконки продукта в контракте нет — фронт держит `Map<title, svg>` (или ретрофитим `iconKey` позже).
+- **По просьбе Егора (Дни 9→10)** переименованы поля: `name`→`title`, `category`→`strategy`, `description`→`text`; добавлены `type` (обязательное) и `mark` (опциональное).
 
 ---
 

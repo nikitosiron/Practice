@@ -105,27 +105,36 @@ test('addGalleryItem: type XYZ -> 400', async () => {
 test('addTimelineItem: year вне диапазона (1500) -> 400', async () => {
     await assert.rejects(
         () => addTimelineItem({
-            year: 1500, name: 'X', category: 'B2B',
-            subtitle: 'sub', description: 'desc'
+            type: 'product', year: 1500, title: 'X', strategy: 'B2B',
+            subtitle: 'sub', text: 'desc'
         }),
         (err) => err.status === 400
     );
 });
 
-test('addTimelineItem: category вне enum ("XYZ") -> 400', async () => {
+test('addTimelineItem: strategy вне enum ("XYZ") -> 400', async () => {
     await assert.rejects(
         () => addTimelineItem({
-            year: 2020, name: 'X', category: 'XYZ',
-            subtitle: 'sub', description: 'desc'
+            type: 'product', year: 2020, title: 'X', strategy: 'XYZ',
+            subtitle: 'sub', text: 'desc'
         }),
         (err) => err.status === 400
     );
 });
 
-test('addTimelineItem: без description -> 400', async () => {
+test('addTimelineItem: без text -> 400', async () => {
     await assert.rejects(
         () => addTimelineItem({
-            year: 2020, name: 'X', category: 'B2B', subtitle: 'sub'
+            type: 'product', year: 2020, title: 'X', strategy: 'B2B', subtitle: 'sub'
+        }),
+        (err) => err.status === 400
+    );
+});
+
+test('addTimelineItem: без type -> 400', async () => {
+    await assert.rejects(
+        () => addTimelineItem({
+            year: 2020, title: 'X', strategy: 'B2B', subtitle: 'sub', text: 'desc'
         }),
         (err) => err.status === 400
     );

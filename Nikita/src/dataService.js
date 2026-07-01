@@ -278,30 +278,36 @@ async function deleteGalleryItem(id) {
     return removed;
 }
 
-const ALLOWED_TIMELINE_CATEGORIES = ['B2B', 'B2C', 'B2E'];
+const ALLOWED_TIMELINE_STRATEGIES = ['B2B', 'B2C', 'B2E'];
 
 function validateTimelineItem(item) {
     if (!item || typeof item !== 'object') {
         throw validationError('Тело запроса должно быть объектом записи таймлайна');
     }
-    if (typeof item.name !== 'string' || item.name.trim() === '') {
-        throw validationError('Поле name обязательно и должно быть непустой строкой');
+    if (typeof item.type !== 'string' || item.type.trim() === '') {
+        throw validationError('Поле type обязательно и должно быть непустой строкой');
     }
     if (typeof item.year !== 'number' || !Number.isInteger(item.year)
         || item.year < 1990 || item.year > 2100) {
         throw validationError('Поле year должно быть целым числом от 1990 до 2100');
     }
-    if (typeof item.category !== 'string') {
-        throw validationError('Поле category должно быть строкой');
+    if (item.mark !== undefined && typeof item.mark !== 'string') {
+        throw validationError('Поле mark, если задано, должно быть строкой');
     }
-    if (!ALLOWED_TIMELINE_CATEGORIES.includes(item.category)) {
-        throw validationError('Поле category должно быть одним из: B2B, B2C, B2E');
+    if (typeof item.title !== 'string' || item.title.trim() === '') {
+        throw validationError('Поле title обязательно и должно быть непустой строкой');
     }
     if (typeof item.subtitle !== 'string' || item.subtitle.trim() === '') {
         throw validationError('Поле subtitle обязательно и должно быть непустой строкой');
     }
-    if (typeof item.description !== 'string' || item.description.trim() === '') {
-        throw validationError('Поле description обязательно и должно быть непустой строкой');
+    if (typeof item.strategy !== 'string') {
+        throw validationError('Поле strategy должно быть строкой');
+    }
+    if (!ALLOWED_TIMELINE_STRATEGIES.includes(item.strategy)) {
+        throw validationError('Поле strategy должно быть одним из: B2B, B2C, B2E');
+    }
+    if (typeof item.text !== 'string' || item.text.trim() === '') {
+        throw validationError('Поле text обязательно и должно быть непустой строкой');
     }
 }
 
@@ -311,11 +317,13 @@ async function addTimelineItem(item) {
     if (!data.timeline) data.timeline = [];
     const newItem = {
         id: getNextId(data.timeline),
+        type: item.type,
         year: item.year,
-        name: item.name,
-        category: item.category,
+        mark: item.mark ?? '',
+        title: item.title,
         subtitle: item.subtitle,
-        description: item.description,
+        strategy: item.strategy,
+        text: item.text,
         active: item.active !== false
     };
     data.timeline.push(newItem);
@@ -333,11 +341,13 @@ async function updateTimelineItem(id, item) {
     }
     const updated = {
         ...data.timeline[index],
+        type: item.type,
         year: item.year,
-        name: item.name,
-        category: item.category,
+        mark: item.mark ?? data.timeline[index].mark ?? '',
+        title: item.title,
         subtitle: item.subtitle,
-        description: item.description,
+        strategy: item.strategy,
+        text: item.text,
         active: item.active !== false
     };
     data.timeline[index] = updated;

@@ -2516,7 +2516,263 @@ BLOCKS.md:                НОВЫЙ файл — оглавление всех 
 внимание для сущностного (контракты, валидация, интеграция с командой).
 
 Второе — **сущность-объект vs сущность-список — это не «частный случай»,
-а самостоятельный подпаттерн**: одна PUT-операция, без id, без getNextId.
+а самостоятельный подпаттерн**: одна PUT-operations, без id, без getNextId.
 После `hero` и `contactForm` он тоже стал шаблоном.
+
+---
+
+# День 10 — ретрофит контракта timeline по просьбе Егора
+
+Егор запросил новую форму полей: `id, type, year, mark, title, subtitle,
+strategy, text`. Второй ретрофит уже действующей сущности (первый был gallery
+`image`→`src` в Дне 8). Разница в масштабе: там правили одно поле, здесь —
+переименование трёх + два новых поля + смена смысла enum-поля.
+
+## Маппинг старое → новое
+- `name` → `title` (переименование)
+- `description` → `text` (переименование)
+- `category` → `strategy` (переименование + семантический сдвиг: раньше «категория», теперь «стратегический сегмент»; enum `B2B/B2C/B2E` сохранён)
+- **`type` — новое обязательное поле**, строка. Enum не завёл: значения от Егора не поступили, пусть определит на практике (product/event/milestone/…). Если понадобится строгий список — добавим `ALLOWED_TIMELINE_TYPES`.
+- **`mark` — новое опциональное поле**, строка. Дефолт `""`. Это первый пример **опционального поля в контракте**, до этого у всех сущностей каждое поле было обязательным или дефолтилось до заранее известного значения (типа `"#"` для vk).
+- `active` **сохранён** вопреки списку Егора. Причина: единый флаг во всём backend'е, Ваня в админке им пользуется. Если Егор настаивает — уберём точечно.
+
+## Новое №1 — опциональное поле («задан ↔ не задан»)
+Валидация:
+```js
+if (item.mark !== undefined && typeof item.mark !== 'string') {
+    throw validationError('Поле mark, если задано, должно быть строкой');
+}
+```
+Ключевой момент — `!== undefined` (а не `if (item.mark)`). Причины:
+- `""` (пустая строка) — валидное значение, не должно бросать.
+- `null` — если клиент прислал явное «нет данных», валидацией не режем; в `addTimelineItem` попадёт как `null`, `??` подставит дефолт `""` (см. ниже).
+- `undefined` — поле пропущено, пропускаем валидацию, дефолтим на `""`.
+
+В add/update: `mark: item.mark ?? ''` — при `undefined`/`null` подставляется `""`. Здесь `??` (nullish coalescing) — не `||`: пустая строка `""` должна проходить как валидный «намеренный пустой mark», а `||` её заменил бы. Тонкость из Дня 3 (`??` vs `||`), теперь на месте.
+
+В update тонкость посложнее: `item.mark ?? data.timeline[index].mark ?? ''`. Три ступени: (1) пришло новое значение — берём; (2) не пришло — сохраняем старое; (3) старого нет (миграционный кейс, запись без `mark`) — ставим `""`. Двойная `??`-цепочка — идиома для «первое из нескольких, что не null».
+
+## Новое №2 — enum-переименование ≠ смена enum-значений
+`category` → `strategy` — переименовали **имя** поля, но множество допустимых значений (`B2B/B2C/B2E`) осталось. Значит:
+- Данные в сиде мигрируют механически (замена ключа), значения не трогаем.
+- Тесту `category вне enum` достаточно переименоваться в `strategy вне enum`, тело — то же.
+- Константа переехала: `ALLOWED_TIMELINE_CATEGORIES` → `ALLOWED_TIMELINE_STRATEGIES`. Не оставляем алиас на старое имя: в модуле не экспортируется, снаружи никто не завязан.
+
+Урок: **enum — это <имя поля> × <множество значений>**. Меняются они независимо. Правило поможет, если Егор потом попросит расширить множество (добавить `B2E2` или `Internal`) — тогда сохраняем имя, меняем массив.
+
+## Новое №3 — «ретрофит после ретрофита» — миграция всё дешевле
+Gallery-ретрофит в Дне 8 занял целый цикл (0.1–0.6). Timeline-ретрофит сделан за одну итерацию:
+- сид (3 записи, замена 3 ключей + добавление 2)
+- сервис (валидатор, add, update; `strategy` — переименование константы и текстов)
+- 3 существующих теста переименованы (`name`→`title`, `category`→`strategy`, `description`→`text`); +1 новый (`без type → 400`)
+- smoke 7 сценариев
+
+Стоило ~10 минут кода вместо ~40 в Дне 8. Причина — ретрофит теперь укладывается в существующие шаблоны, а не создаёт новую механику.
+
+## Итоги Дня 10
+Тесты **31/31** (было 30, +1 «без type»). Дымовой прогон **7/7**. `data.json` восстановлен из `scratchpad/data.json.bak5`, sha совпал.
+
+### Что изменилось
+```
+data/data.json:           timeline: name→title, category→strategy, description→text; +type:"product", +mark:""
+src/dataService.js:       ALLOWED_TIMELINE_CATEGORIES → ALLOWED_TIMELINE_STRATEGIES,
+                          validateTimelineItem: +проверка type, +опциональная mark, поля переименованы,
+                          addTimelineItem/updateTimelineItem: поля переименованы, +type, +mark (с ?? '')
+test/dataService.test.js: 3 теста timeline переименованы (strategy, text), +1 новый (без type -> 400)
+NOTES.md:                 +раздел День 10
+BLOCKS.md:                Блок 3 timeline — обновлённый контракт
+```
+
+## Ключевая мысль Дня 10
+**Второй ретрофит той же сущности не должен быть болезненнее первого — а лучше проще.** Здесь так и вышло: паттерн миграции (данные → сервис → тесты → smoke) закреплён, вложенные тонкости (`??` в update, undefined-проверка для опциональных) уже освоены, enum-инвариант «имя ⊥ значения» проговорён. Каждый следующий ретрофит будет ещё быстрее — если только не потребует новой механики (типа реальной загрузки файлов).
+
+Второе — **опциональное поле — маленький, но полноценный шаблон**: `!== undefined` в валидаторе + `?? ''` в add + двойной `??` в update. Три строчки, но с ловушками (не `||`, не `if (x)`, не `Boolean(x)`). Сохраняем как эталон на будущее.
+
+---
+
+# День 11 — админка становится «настоящей»: цветовая палитра + загрузка файлов
+
+Два независимых UX-улучшения админки, объединённых общей идеей: **не менять
+downstream-код** (`collectXxx()`, `saveXxx()`, `toggleXxx()`, `addXxx()`), а
+только заменить сам UI-виджет. Работает потому, что скрытый `<input>` внутри
+нового виджета носит тот же CSS-класс (`.timeline__item-type`,
+`.gallery__item-src` и т.п.), по которому его уже читают `collect*()`
+через `card.querySelector(...)`. Меняется вид, не меняется контракт.
+
+## Часть 1 — палитра цветов для timeline
+
+Раньше поле `type` было текстовым `<input>`, куда админ вводил номер варианта
+CSS вручную. Мы обновили это на визуальную палитру из 20 цветных плиток.
+
+### Как получены цвета
+Прогрепал `style.min.css` от Егора — правил `.icon-block--N .icon-block__icon
+{ background-color: HEX }` **всего 10** для вариантов 2, 6, 9, 10, 11, 12,
+14, 15, 16, 19. Остальные 10 (1, 3, 4, 5, 8, 13, 17, 18, 20, 21)
+наследуют базовый `.icon-block__icon { background-color: #507bce }` и на
+странице выглядят одинаково синими. Значит палитра — 10 разноцветных +
+10 «синий N (по умолч.)». Массив `TIMELINE_COLOR_VARIANTS` в admin.js — тот
+самый список из 20 записей `{ value, color, label }`.
+
+### Паттерн «UI-виджет, невидимый снаружи»
+```js
+function buildTimelineColorField(currentValue) {
+  var hidden = document.createElement('input');
+  hidden.type = 'hidden';
+  hidden.className = 'field-input timeline__item-type';  // ← тот же класс
+  hidden.value = String(currentValue == null ? '' : currentValue);
+  // …рендерим кнопки-плитки, каждая на клик пишет hidden.value = variant.value…
+}
+```
+`collectTimelineData` читает `.timeline__item-type` как раньше — не важно,
+`<input type="text">` это или `<input type="hidden">`. Виджет «прозрачен» для
+существующей логики. Ни одну функцию сохранения/переключения активации не
+трогали.
+
+### Мелочь про clean-up state
+При клике по плитке сначала снимаем `.selected` со всех через
+`querySelectorAll(...).forEach(n => n.classList.remove('selected'))`, потом
+добавляем новой. Простой шаблон «одиночного выбора» без radio-input.
+Ловушка: без первого шага в кладке `.selected` останется на предыдущей
+плитке — визуальные «два выбранных» цвета.
+
+## Часть 2 — загрузка файлов через multer
+
+Ранее для добавления фото/логотипа/иконки нужно было положить файл в
+`travelline_site/upload/` руками, скопировать путь и вставить в текстовое
+поле. Теперь — «Загрузить...» → системный диалог → путь подставляется сам.
+
+### Новое №1 — multer как middleware
+```js
+const multer = require('multer');
+const uploadStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => {
+        const ext = (path.extname(file.originalname) || '').toLowerCase().slice(0, 8);
+        const id = crypto.randomUUID().slice(0, 12);
+        cb(null, `${Date.now()}-${id}${ext}`);
+    }
+});
+const upload = multer({ storage, limits: {fileSize: 100*1024*1024}, fileFilter: ... });
+```
+- **`diskStorage`** — файл идёт сразу на диск (streaming), не в оперативку.
+  Для 100 МБ .mp4 это важно.
+- **`randomUUID().slice(0, 12)`** — короткий безопасный id. Оригинальное
+  имя `file.originalname` **не используется** — защита от path-traversal
+  (`../../../etc/passwd`), от коллизий и от небезопасных символов в
+  именах.
+- **Расширение отсекаю до 8 символов** (`.slice(0, 8)`) — параноидально,
+  но защищает от атакующей строки в extension.
+- **`fileFilter`** — whitelist MIME `/^(image|video)\//`. Всё остальное
+  бросает Error, multer передаёт её в наш callback → 400.
+- **`limits.fileSize: 100 MB`** — хватает на .mp4 галереи, режет попытки
+  DoS через мегаобьекты.
+
+### Новое №2 — оборачивание multer вручную
+```js
+app.post('/api/upload', (req, res) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) return res.status(400).json({ success: false, message: err.message });
+        // …обрабатываем req.file…
+    });
+});
+```
+**Почему не `app.post('/api/upload', upload.single('file'), handler)` —
+классический паттерн Express?** Потому что multer передаёт свои ошибки
+в **`next(err)`**, а Express 5 без `error-handling middleware` их превращает
+в 500 с невнятным текстом. Вместо этого мы вызываем multer как обычную
+функцию с 3-м колбэком — тогда ошибка приходит первым аргументом,
+и мы отвечаем **400 с человеческим `err.message`** («Разрешены только
+изображения и видео», «File too large» и т.д.). Компактнее error-middleware,
+контекст не теряется.
+
+### Новое №3 — общий helper `buildFileUploadField` в админке
+```js
+function buildFileUploadField(labelText, extraClasses, value, accept) {
+    // видимый input с тем же className что раньше — collect*() не тронут
+    // + скрытый <input type="file"> + кнопка «Загрузить...»
+    // fetch('/api/upload', {method:'POST', body: FormData(file)}) → src в input
+}
+```
+Ключевые UX-моменты:
+- **`accept`** на скрытом input — браузер сам фильтрует файлы в диалоге.
+  `image/*` для аватаров/логотипов, `image/*,video/*` для галереи.
+- **`fileInput.value = ''`** в `finally` — иначе повторный выбор того же
+  файла не сработает: `change`-событие не срабатывает, если value не
+  поменялось.
+- **`button.disabled = true`** во время загрузки — защита от двойного
+  клика и второго `fetch` на тот же файл.
+- Ответ разбираем **вместе с HTTP-кодом**: `r.json().then(j => ({ok: r.ok,
+  body: j}))`. Без этого ошибочный ответ 400 с JSON-телом попадал бы в
+  `.then` как «успех».
+
+### Куда легко было наступить (не наступили)
+1. **`multer.MulterError` vs обычный `Error`.** Multer различает эти два
+   класса — если хочешь давать 413 на «File too large», а 400 на «bad
+   mimetype», нужно `if (err instanceof multer.MulterError)`. Мы сейчас
+   даём 400 обеим — достаточно для учебного backend'а.
+2. **Middleware порядок**: `app.use('/api', cache-headers)` стоит **до**
+   `POST /api/upload`, значит и ответ на upload имеет `Cache-Control:
+   no-store`. Ок для нас.
+3. **Path traversal через `originalname`**. Классический баг: `filename:
+   (req,f,cb) => cb(null, f.originalname)` — если клиент шлёт
+   `originalname: "../evil.js"`, файл ляжет **вне** `UPLOAD_DIR`. Мы
+   `originalname` вообще не используем как имя, только вытаскиваем
+   расширение с ограничением 8 символов.
+4. **Загруженные файлы вне git-ignore**. Осознанное решение: `data.json`
+   ссылается на локальные пути, коллега клонирует репо — файлы должны
+   быть на месте. Если объёмы вырастут — тогда игнор + отдельный runtime-
+   storage.
+
+## Итоги Дня 11
+```
+package.json:              +multer ^2.2.0
+server.js:                 +импорт multer/crypto/fs, +UPLOAD_DIR init,
+                           +multer.diskStorage/fileFilter/limits,
+                           +POST /api/upload (~35 строк)
+admin/admin.js:            +TIMELINE_COLOR_VARIANTS (20 записей),
+                           +buildTimelineColorField,
+                           +buildFileUploadField,
+                           заменены 5 buildField→buildFileUploadField
+                           (team.photo, gallery.src, brands.src, work.image,
+                           timeline.mark), заменён 1 buildField→
+                           buildTimelineColorField (timeline.type)
+admin/admin.css:           +.file-upload-row/.file-upload-hidden,
+                           +.color-swatches/.color-swatch/.color-swatch.selected
+travelline_site/upload/user-uploads/:  новая папка (создаётся сервером сама)
+```
+Тесты **31/31** (валидация не задета — файловая загрузка это HTTP-уровень,
+а не dataService).
+
+### Свежие curl-проверки `/api/upload`
+| Сценарий | Ответ |
+|---|---|
+| POST 68-байт PNG (`image/png`) | 201 + `{src: "upload/user-uploads/<ts>-<uuid>.png"}` |
+| POST 5-байт txt (`text/plain`) | 400 «Разрешены только изображения и видео» |
+| POST без поля `file` | 400 «Файл не получен (ожидался поле "file")» |
+| GET `/upload/user-uploads/<name>` | 200, `image/png`, 68 байт |
+
+## Концепции (новые)
+| Категория | Что |
+|---|---|
+| Backend | `multer`, `diskStorage`, `fileFilter`, `limits`; `crypto.randomUUID()` для безопасных имён файлов; ручной wrap multer в колбэке для контроля над ошибками (обход `next(err)`) |
+| Безопасность | path-traversal через `originalname` (не используем как имя); MIME-whitelist вместо blacklist; лимит размера как защита от DoS; обрезка расширения (`slice(0,8)`) |
+| Frontend | `<input type="file">` + `accept`, `FormData`, `fetch` без `Content-Type` (браузер сам выставит `multipart/form-data` c boundary), `fileInput.value=''` для повторного выбора того же файла, `button.disabled` защита от двойного submit |
+| UI-архитектура | **«невидимый снаружи виджет»** — скрытый `<input>` с тем же CSS-классом, что раньше, → downstream `collect*()` работает без правок. Работает и для swatch-picker, и для file-upload |
+| CSS | flexbox-строка (input flex:1 + button flex-shrink:0) для «input+button» комбо; кастомные плитки-radio через `<button>` + `.selected` — простая одиночная выборка без radio-input |
+
+## Ключевая мысль Дня 11
+**Форма — это HTML + логика. Меняй одно за раз.** Оба виджета (палитра
+цветов, upload) переделывают **HTML часть** карточки, а логику
+(`collectTimelineData`, `saveTimelineItem`, `addTimelineItem`, `toggle*`)
+не трогают. Скрытый `<input>` с тем же классом — приём, который сохраняет
+контракт «форма → JSON» неизменным. Точный аналог трёхслойной архитектуры
+Дня 3 (HTTP не смотрит внутрь тела): здесь «логика формы не смотрит внутрь
+виджета, только на значение по CSS-селектору». Это уже второй раз, когда
+дисциплина слоёв окупается на изменениях.
+
+Второе — **безопасность файловой загрузки — это набор из 4 простых мер**:
+случайное имя, MIME-whitelist, лимит размера, изоляция под-папки. Ни одна
+не сложная, но пропуск любой — 90% реальных багов в этой фиче.
+
 
 ---

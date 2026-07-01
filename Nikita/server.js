@@ -1,5 +1,8 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const multer = require('multer');
 const { readData } = require('./src/storage');
 const {
     updateHero,
@@ -19,8 +22,53 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+});
 app.use(express.static(path.join(__dirname, 'travelline_site')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
+
+// ─── File upload endpoint ─────────────────────────────────
+// Accepts image/* or video/* via multipart/form-data (field name "file").
+// Saves to travelline_site/upload/user-uploads/ with a random name so we don't
+// have to trust the client's originalname (path-traversal, collisions, non-ascii).
+// Returns the relative path the client can drop straight into any *.src / *.image
+// / *.photo / *.mark field.
+const UPLOAD_DIR = path.join(__dirname, 'travelline_site', 'upload', 'user-uploads');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const uploadStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => {
+        const ext = (path.extname(file.originalname) || '').toLowerCase().slice(0, 8);
+        const id = crypto.randomUUID().slice(0, 12);
+        cb(null, `${Date.now()}-${id}${ext}`);
+    }
+});
+
+const upload = multer({
+    storage: uploadStorage,
+    limits: { fileSize: 100 * 1024 * 1024 },  // 100 MB — big enough for the .mp4 gallery clips
+    fileFilter: (req, file, cb) => {
+        if (/^(image|video)\//.test(file.mimetype)) return cb(null, true);
+        cb(new Error('Разрешены только изображения и видео'));
+    }
+});
+
+app.post('/api/upload', (req, res) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            const status = err instanceof multer.MulterError ? 400 : 400;
+            return res.status(status).json({ success: false, message: err.message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'Файл не получен (ожидался поле "file")' });
+        }
+        const relPath = 'upload/user-uploads/' + req.file.filename;
+        res.status(201).json({ success: true, data: { src: relPath, size: req.file.size, mimetype: req.file.mimetype } });
+    });
+});
 
 app.get('/api/data', async (req, res) => {
     try {
