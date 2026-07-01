@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { getNextId, addTeamMember, updateHero, addVacancy, addBenefit, addGalleryItem, addPosition } = require('../src/dataService');
+const { getNextId, addTeamMember, updateHero, addVacancy, addBenefit, addGalleryItem, addTimelineItem, addPosition } = require('../src/dataService');
 
 test('getNextId: пустой массив -> 1', () => {
     assert.strictEqual(getNextId([]), 1);
@@ -91,6 +91,35 @@ test('addGalleryItem: без caption -> 400', async () => {
 test('addGalleryItem: image из пробелов -> 400', async () => {
     await assert.rejects(
         () => addGalleryItem({ image: '   ', caption: 'подпись' }),
+        (err) => err.status === 400
+    );
+});
+
+test('addTimelineItem: year вне диапазона (1500) -> 400', async () => {
+    await assert.rejects(
+        () => addTimelineItem({
+            year: 1500, name: 'X', category: 'B2B',
+            subtitle: 'sub', description: 'desc'
+        }),
+        (err) => err.status === 400
+    );
+});
+
+test('addTimelineItem: category вне enum ("XYZ") -> 400', async () => {
+    await assert.rejects(
+        () => addTimelineItem({
+            year: 2020, name: 'X', category: 'XYZ',
+            subtitle: 'sub', description: 'desc'
+        }),
+        (err) => err.status === 400
+    );
+});
+
+test('addTimelineItem: без description -> 400', async () => {
+    await assert.rejects(
+        () => addTimelineItem({
+            year: 2020, name: 'X', category: 'B2B', subtitle: 'sub'
+        }),
         (err) => err.status === 400
     );
 });
