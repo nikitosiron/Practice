@@ -206,16 +206,16 @@ test('addDirection: без description -> 400', async () => {
     );
 });
 
-test('updateContactForm: directions пустой массив -> 400', async () => {
+test('updateContactForm: пустой submitLabel -> 400', async () => {
     await assert.rejects(
-        () => updateContactForm({ title: 'X', description: 'D', directions: [] }),
+        () => updateContactForm({ title: 'X', description: 'D', submitLabel: '   ' }),
         (err) => err.status === 400
     );
 });
 
-test('updateContactForm: directions с пустой строкой -> 400', async () => {
+test('updateContactForm: без submitLabel -> 400', async () => {
     await assert.rejects(
-        () => updateContactForm({ title: 'X', description: 'D', directions: ['Backend', '   '] }),
+        () => updateContactForm({ title: 'X', description: 'D' }),
         (err) => err.status === 400
     );
 });

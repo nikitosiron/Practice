@@ -1,3 +1,6 @@
+require('dotenv').config();
+const session = require('express-session');
+const bcrypt = require('bcrypt');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -18,17 +21,52 @@ const {
     updateContactForm,
 } = require('./src/dataService');
 
+const ADMIN_LOGIN = process.env.ADMIN_LOGIN;
+const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
+const SESSION_SECRET = process.env.SESSION_SECRET;
+
+if (!ADMIN_LOGIN || !ADMIN_PASSWORD_HASH || !SESSION_SECRET) {
+    console.error('В .env не заданы ADMIN_LOGIN / ADMIN_PASSWORD_HASH / SESSION_SECRET');
+    process.exit(1);
+}
+
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
+app.use(session({
+    name: 'admin.sid',
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: false,                
+        maxAge: 1000 * 60 * 60 * 8    
+    }
+}));
 app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
 });
 app.use(express.static(path.join(__dirname, 'travelline_site')));
+
+app.use('/admin/login', express.static(path.join(__dirname, 'admin', 'login')));
+
+app.use('/admin', (req, res, next) => {
+    if (req.session && req.session.isAdmin) return next();
+    return res.redirect('/admin/login/');
+});
+
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
+function requireAuth(req, res, next) {
+    if (req.session && req.session.isAdmin) {
+        return next();
+    }
+    return res.status(401).json({ success: false, message: 'Требуется авторизация' });
+}
 // ─── File upload endpoint ─────────────────────────────────
 // Accepts image/* or video/* via multipart/form-data (field name "file").
 // Saves to travelline_site/upload/user-uploads/ with a random name so we don't
@@ -56,7 +94,59 @@ const upload = multer({
     }
 });
 
-app.post('/api/upload', (req, res) => {
+app.post('/api/login', async (req, res) => {
+    try {
+        const { login, password } = req.body || {};
+        if (typeof login !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({ success: false, message: 'Нужны логин и пароль' });
+        }
+
+        const loginOk = login === ADMIN_LOGIN;
+        const passwordOk = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
+
+        if (!loginOk || !passwordOk) {
+            return res.status(401).json({ success: false, message: 'Неверный логин или пароль' });
+        }
+
+        req.session.regenerate((err) => {
+            if (err) {
+                console.error('session.regenerate:', err);
+                return res.status(500).json({ success: false, message: 'Ошибка сессии' });
+            }
+            req.session.isAdmin = true;
+            req.session.login = login;
+            res.json({ success: true, data: { login } });
+        });
+    } catch (err) {
+        console.error('POST /api/login:', err);
+        res.status(500).json({ success: false, message: 'Внутренняя ошибка сервера' });
+    }
+});
+
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('session.destroy:', err);
+            return res.status(500).json({ success: false, message: 'Не удалось выйти' });
+        }
+        res.clearCookie('admin.sid');
+        res.json({ success: true });
+    });
+});
+
+app.get('/api/me', (req, res) => {
+    if (req.session && req.session.isAdmin) {
+        return res.json({ success: true, data: { login: req.session.login } });
+    }
+    res.status(401).json({ success: false, message: 'Не авторизован' });
+});
+
+app.use('/api', (req, res, next) => {
+    if (req.method === 'GET') return next();          
+    return requireAuth(req, res, next);               
+});
+
+app.post('/api/upload', requireAuth, (req, res) => {
     upload.single('file')(req, res, (err) => {
         if (err) {
             const status = err instanceof multer.MulterError ? 400 : 400;

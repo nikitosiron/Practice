@@ -1,10 +1,9 @@
+
 let vacanciesScrollTween = null;
 let workScrollTween = null;
 let galleryColorTrigger = null;
+const dynamicContentBaseUrl = new URL('.', document.currentScript?.src || window.location.href);
 
-// Force uploaded brand logos of any natural size to fit the strip nicely.
-// Injected once, before any render*() runs. Kept here (not in style.min.css)
-// because style.min.css is the untouched vendor bundle.
 function injectDynamicStyles() {
   if (document.getElementById('dynamic-content-styles')) return;
   const style = document.createElement('style');
@@ -30,13 +29,12 @@ function injectDynamicStyles() {
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     injectDynamicStyles();
+
     const data = await loadSiteData();
 
     renderHero(data.hero);
-    initAdvantagesTitleAnimation();
 
     renderTeam(data.team);
-    initTeamVkLogoHover();
 
     renderTimeline(data.timeline);
 
@@ -53,12 +51,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderBenefits(data.benefits);
 
     renderForm(data.contactForm);
-    
-    initVacanciesScroll();
 
-    initGalleryAndWorkScroll();
-
-    refreshScrollTriggersAfterImagesLoad(document.querySelector('.gallery'), initGalleryAndWorkScroll);
+    reinitPageScripts(document);
+    scheduleVacanciesScrollReinit();
+    window.addEventListener('resize', () => {
+      initIconBlocks(document);
+      updatePlatformTimelineLayout();
+    });
 
   } catch (error) {
     console.error('Ошибка загрузки динамического контента:', error);
@@ -66,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadSiteData() {
-  const response = await fetch('/api/data');
+  const response = await fetch(new URL('api/data', dynamicContentBaseUrl).href);
 
   if (!response.ok) {
     throw new Error('Не удалось загрузить данные сайта');
@@ -127,7 +126,7 @@ function renderHero(hero) {
   const statsList = document.querySelector('.advantages__list');
   const statsTitle = document.querySelector('.advantages__title');
 
-  if (!hero || !titleElement || !statsList) {
+  if (!hero || !titleElement) {
     return;
   }
 
@@ -144,7 +143,7 @@ function renderHero(hero) {
     titleElement.textContent = hero.title;
   }
 
-  if (!Array.isArray(hero.stats)) {
+  if (!statsList || !statsTitle || !Array.isArray(hero.stats)) {
     return;
   }
 
@@ -172,12 +171,12 @@ function renderHero(hero) {
 }
 
 function initAdvantagesTitleAnimation() {
-  if (window.innerWidth < 992) {
+  if (!window.gsap || !window.ScrollTrigger || window.innerWidth < 992) {
     return;
   }
 
   ScrollTrigger.getAll().forEach((trigger) => {
-    if (trigger.vars.id === 'advantages-title') {
+    if (trigger.vars.id === 'advantages-title' || trigger.trigger?.classList?.contains('advantages__item')) {
       trigger.kill();
     }
   });
@@ -283,32 +282,74 @@ function createTeamCard(member) {
   return article;
 }
 
-function initTeamVkLogoHover() {
-  const elements = document.querySelectorAll('.team__item-card');
-
-  elements.forEach((el) => {
-    const vkLogo = el.querySelector('.team__item-vk-logo');
-
-    if (!vkLogo) {
+function initTeamVkLogoHover(root = document) {
+  getElements(root, '.team__slider').forEach((slider) => {
+    if (slider.dataset.vkHoverInited) {
       return;
     }
 
-    el.addEventListener('mouseenter', () => {
+    slider.dataset.vkHoverInited = 'true';
+
+    slider.addEventListener('mouseover', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const relatedTarget = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+      const card = target?.closest('.team__item-card');
+      const vkLogo = card?.querySelector('.team__item-vk-logo');
+
+      if (!card || !slider.contains(card) || (relatedTarget && card.contains(relatedTarget)) || !vkLogo) {
+        return;
+      }
+
       vkLogo.classList.add('active');
       vkLogo.classList.remove('inactive');
     });
 
-    el.addEventListener('mouseleave', () => {
+    slider.addEventListener('mouseout', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const relatedTarget = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+      const card = target?.closest('.team__item-card');
+      const vkLogo = card?.querySelector('.team__item-vk-logo');
+
+      if (!card || !slider.contains(card) || (relatedTarget && card.contains(relatedTarget)) || !vkLogo) {
+        return;
+      }
+
       vkLogo.classList.add('inactive');
       vkLogo.classList.remove('active');
     });
   });
 }
 
-function renderTimeline(platform) {
+function initTeamSlider() {
+  const slider = document.querySelector('.team__slider');
+
+  if (!slider || !window.Swiper) {
+    return;
+  }
+
+  if (slider.swiper) {
+    slider.swiper.destroy(true, true);
+  }
+
+  const shouldLoop = slider.querySelectorAll('.swiper-slide').length > 1;
+
+  new Swiper(slider, {
+    loop: shouldLoop,
+    autoplay: shouldLoop ? {
+      delay: 0,
+      disableOnInteraction: false
+    } : false,
+    speed: 6000,
+    slidesPerView: 'auto',
+    spaceBetween: 20,
+    observer: true
+  });
+}
+
+function renderTimeline(timeline) {
   const wrapper = document.querySelector('.platform-chart__wrapper');
 
-  if (!wrapper || !Array.isArray(platform)) {
+  if (!wrapper || !Array.isArray(timeline)) {
     return;
   }
 
@@ -355,31 +396,161 @@ function renderTimeline(platform) {
 </div>
 `;
 
-  [...platform]
-  .sort((a, b) => Number(a.id) - Number(b.id))
-  .forEach((card) => {
+  const groupedByYear = [...timeline]
+  .filter((card) => card.active !== false)
+  .sort((a, b) => Number(a.year) - Number(b.year) || Number(a.id) - Number(b.id))
+  .reduce((groups, card) => {
+    const year = card.year || '';
+
+    if (!groups.has(year)) {
+      groups.set(year, []);
+    }
+
+    groups.get(year).push(card);
+
+    return groups;
+  }, new Map());
+
+  groupedByYear.forEach((cards, year) => {
     const div = document.createElement('div');
+    const columnIndex = wrapper.children.length + 1;
+
     div.className = 'platform-chart__col';
+    div.dataset.dynamicYear = year;
+    div.style.height = `${getTimelineColumnHeight(cards.length, columnIndex)}px`;
 
     const chartTitle = document.createElement('p');
     chartTitle.className = 'platform-chart__col-title';
-    chartTitle.textContent = card.year || '';
+    chartTitle.textContent = year;
+
+    const items = document.createElement('div');
+    items.className = 'platform-chart__col-items';
+
+    cards.forEach((card) => {
+      items.appendChild(createTimelineCard(card));
+    });
 
     div.appendChild(chartTitle);
-    div.appendChild(createTimelineCard(card));
+    div.appendChild(items);
     wrapper.appendChild(div);
   });
+
+  requestAnimationFrame(updatePlatformTimelineLayout);
+
+  document.fonts?.ready?.then(updatePlatformTimelineLayout);
+}
+
+function updatePlatformTimelineLayout() {
+  adjustTimelineDynamicColumnHeights();
+  adjustPlatformTimelineOffset();
+  refreshScrollTriggers();
+}
+
+function adjustTimelineDynamicColumnHeights() {
+  const wrapper = document.querySelector('.platform-chart__wrapper');
+
+  if (!wrapper) {
+    return;
+  }
+
+  if (window.innerWidth < 1326) {
+    wrapper.querySelectorAll('.platform-chart__col[data-dynamic-year]').forEach((column) => {
+      column.style.height = '';
+    });
+
+    return;
+  }
+
+  const lineOffset = window.innerWidth <= 1600 ? 64 : 80;
+  const columns = Array.from(wrapper.children);
+
+  wrapper.querySelectorAll('.platform-chart__col[data-dynamic-year]').forEach((column) => {
+    const items = column.querySelector('.platform-chart__col-items');
+
+    if (!items) {
+      return;
+    }
+
+    const columnIndex = columns.indexOf(column) + 1;
+    const profileHeight = getTimelineColumnProfileHeight(columnIndex);
+    const itemsCount = items.children.length;
+
+    if (itemsCount <= 1) {
+      column.style.height = `${profileHeight}px`;
+      return;
+    }
+
+    column.style.height = 'auto';
+
+    const stackHeight = Math.ceil(items.getBoundingClientRect().height + lineOffset);
+    column.style.height = `${Math.max(profileHeight, stackHeight)}px`;
+  });
+}
+
+function adjustPlatformTimelineOffset() {
+  const chart = document.querySelector('.platform-chart');
+  const wrapper = document.querySelector('.platform-chart__wrapper');
+  const heading = document.querySelector('.platform__heading');
+
+  if (!chart || !wrapper || !heading) {
+    return;
+  }
+
+  chart.style.marginTop = '';
+
+  if (window.innerWidth < 1326) {
+    return;
+  }
+
+  const headingRect = heading.getBoundingClientRect();
+  const columns = wrapper.querySelectorAll('.platform-chart__col');
+  let offset = 0;
+
+  columns.forEach((column) => {
+    const columnRect = column.getBoundingClientRect();
+    const overlapsHorizontally = columnRect.left < headingRect.right + 32 && columnRect.right > headingRect.left - 32;
+
+    if (overlapsHorizontally && columnRect.top < headingRect.bottom + 32) {
+      offset = Math.max(offset, headingRect.bottom + 32 - columnRect.top);
+    }
+  });
+
+  if (offset > 0) {
+    chart.style.marginTop = `${Math.ceil(offset)}px`;
+  }
+}
+
+function getTimelineColumnHeight(itemsCount, columnIndex) {
+  const profileHeight = getTimelineColumnProfileHeight(columnIndex);
+
+  if (itemsCount <= 1) {
+    return profileHeight;
+  }
+
+  const itemHeight = window.innerWidth <= 1600 ? 150 : 170;
+  const gap = window.innerWidth <= 1600 ? 22 : 30;
+  const lineOffset = window.innerWidth <= 1600 ? 64 : 80;
+  const stackHeight = itemsCount * itemHeight + Math.max(0, itemsCount - 1) * gap + lineOffset;
+
+  return Math.max(profileHeight, stackHeight);
+}
+
+function getTimelineColumnProfileHeight(columnIndex) {
+  const desktopHeights = [137, 329, 256, 332, 292, 433, 511, 605, 457, 360, 605, 501];
+  const laptopHeights = [126, 288, 198, 241, 191, 395, 438, 473, 355, 266, 480, 379];
+  const heights = window.innerWidth <= 1600 ? laptopHeights : desktopHeights;
+
+  return heights[(columnIndex - 1) % heights.length];
 }
 
 function createTimelineCard(card) {
   const div = document.createElement('div');
-  div.className = 'platform-chart__col-items';
+  div.className = `platform-chart__col-item icon-block icon-block--${card.type || ''}`;
 
   div.innerHTML = `
-  <div class="platform-chart__col-item icon-block icon-block--${card.type || ''}">
   <div class="icon-block__icon">
 
-    <img src="${card.mark || ''}" alt="${card.title || ''}" width="auto" height="auto" decoding="async" loading="lazy">
+    <img class="icon-block__img" src="${card.mark || ''}" alt="${card.title || ''}" width="auto" height="auto" decoding="async" loading="lazy">
 
     <div class="icon-block__description">
       <b>${card.title || ''} <span>${card.strategy || ''}</span></b>
@@ -390,7 +561,6 @@ function createTimelineCard(card) {
 
   <p class="icon-block__text">${card.title || ''}</p>
   <p class="icon-block__year">${card.year || ''}</p>
-  </div>
 `;
   return div;
 }
@@ -408,6 +578,8 @@ function renderBrands(brands) {
 
   container.innerHTML = '';
 
+  const activeBrands = brands.filter((brand) => brand.active !== false);
+
   const wrapper = document.createElement('div');
   wrapper.className = 'swiper-wrapper';
 
@@ -415,7 +587,7 @@ function renderBrands(brands) {
     const list = document.createElement('ul');
     list.className = 'brands__list swiper-slide';
 
-    brands.forEach((brand) => {
+    activeBrands.forEach((brand) => {
       list.appendChild(createBrandItem(brand));
     });
 
@@ -424,19 +596,21 @@ function renderBrands(brands) {
 
   container.appendChild(wrapper);
 
-  new Swiper(container, {
-    loop: true,
-    autoplay: {
-      delay: 0,
-      disableOnInteraction: false
-    },
-    speed: 60000,
-    slidesPerView: 'auto',
-    spaceBetween: 60,
-    observer: true,
-    allowTouchMove: false,
-    simulateTouch: false
-  });
+  if (window.Swiper) {
+    new Swiper(container, {
+      loop: true,
+      autoplay: {
+        delay: 0,
+        disableOnInteraction: false
+      },
+      speed: 60000,
+      slidesPerView: 'auto',
+      spaceBetween: 60,
+      observer: true,
+      allowTouchMove: false,
+      simulateTouch: false
+    });
+  }
 }
 
 function createBrandItem(brand) {
@@ -444,7 +618,7 @@ function createBrandItem(brand) {
   item.className = 'brands__item';
 
   item.innerHTML = `
-    <img src="${brand.src || ''}" alt="${brand.name || 'Brand'}">
+    <img src="${brand.src || brand.image || ''}" alt="${brand.name || 'Brand'}">
   `;
 
   return item;
@@ -452,11 +626,18 @@ function createBrandItem(brand) {
 
 function renderDirections(directions) {
   const container = document.querySelector('.directions__list');
+
+  if (!container || !Array.isArray(directions)) {
+    return;
+  }
+
   container.innerHTML = '';
 
-  directions.forEach((direction) => {
-    container.appendChild(createDirectionItem(direction));
-  });
+  directions
+    .filter((direction) => direction.active !== false)
+    .forEach((direction) => {
+      container.appendChild(createDirectionItem(direction));
+    });
 }
 
 function createDirectionItem(direction) {
@@ -467,19 +648,21 @@ function createDirectionItem(direction) {
   divTitle.className = 'accordion__title';
 
   const title = document.createElement('span');
-  title.textContent = direction.title;
+  title.textContent = direction.title || direction.name || '';
 
   divTitle.appendChild(title);
 
   const divTechs = document.createElement('div');
   divTechs.className = 'accordion__title-stak-list bages-list';
 
-  direction.technologies.forEach((technology) => {
+  const technologies = Array.isArray(direction.technologies) ? direction.technologies : [];
+
+  technologies.forEach((technology) => {
     const divTech = document.createElement('div');
     divTech.className = 'bages-list__item';
 
     divTech.innerHTML = `
-    <img src="${technology.icon || ''}"
+    <img src="${technology.icon || technology.image || ''}"
       alt="${technology.name || ''}">
     ${technology.name || ''}
     `;
@@ -529,9 +712,11 @@ function renderVacancies(vacancies) {
 
   container.innerHTML = '';
 
-  vacancies.forEach((vacancy) => {
-    container.appendChild(createVacancyCard(vacancy));
-  });
+  vacancies
+    .filter((vacancy) => vacancy.active !== false)
+    .forEach((vacancy) => {
+      container.appendChild(createVacancyCard(vacancy));
+    });
 
   const moreVacancies = document.createElement('article');
   moreVacancies.className = 'vacancies__item vacancies__item--type-more card card--half-rounded';
@@ -563,6 +748,7 @@ function renderVacancies(vacancies) {
   ></a>
 
   `;
+
   container.appendChild(moreVacancies);
 }
 
@@ -611,15 +797,26 @@ function initVacanciesScroll() {
     }
 
     if (vacanciesScrollTween) {
-      vacanciesScrollTween.kill();
+      vacanciesScrollTween.kill(true);
       vacanciesScrollTween = null;
     }
 
     ScrollTrigger.getAll().forEach((trigger) => {
+      const animationTargets = trigger.animation?.targets?.() || [];
+      const triggerElement = typeof trigger.vars?.trigger === 'string' ? null : trigger.vars?.trigger;
+      const belongsToVacancies =
+        trigger.trigger?.closest?.('.vacancies') ||
+        trigger.pin?.closest?.('.vacancies') ||
+        triggerElement?.closest?.('.vacancies');
+
       if (
-        trigger.vars.id === 'vacancies-scroll' ||
+        belongsToVacancies ||
+        trigger.vars?.id === 'vacancies-scroll' ||
         trigger.trigger === wrapper ||
-        trigger.pin === wrapper
+        trigger.pin === wrapper ||
+        trigger.vars?.trigger === wrapper ||
+        trigger.vars?.trigger === '.vacancies__container' ||
+        animationTargets.includes(list)
       ) {
         trigger.kill(true);
       }
@@ -628,35 +825,104 @@ function initVacanciesScroll() {
     gsap.killTweensOf(list);
     gsap.set(list, { clearProps: 'transform' });
 
-    if (window.innerWidth < 1326) {
+    if (window.innerWidth < 992) {
       ScrollTrigger.refresh();
       return;
     }
 
-    const scrollDistance = list.scrollWidth - wrapper.offsetWidth;
+    const measurements = measureVacanciesScroll(list, wrapper);
 
-    if (scrollDistance <= 0) {
+    if (measurements.xDistance <= 0) {
       ScrollTrigger.refresh();
       return;
     }
 
-    vacanciesScrollTween = gsap.to(list, {
-      x: () => -(list.scrollWidth - wrapper.offsetWidth + 160),
-      ease: 'none',
-      scrollTrigger: {
-        id: 'vacancies-scroll',
-        trigger: wrapper,
-        start: 'top 30%',
-        end: () => '+=' + (list.scrollWidth - wrapper.offsetWidth),
-        scrub: true,
-        pin: true,
-        invalidateOnRefresh: true,
-        refreshPriority: 3,
+    let xDistance = measurements.xDistance;
+    let pinDistance = measurements.pinDistance;
+
+    vacanciesScrollTween = ScrollTrigger.create({
+      id: 'vacancies-scroll',
+      trigger: wrapper,
+      start: 'top 30%',
+      end: () => '+=' + pinDistance,
+      scrub: true,
+      pin: true,
+      invalidateOnRefresh: true,
+      refreshPriority: 3,
+      onRefreshInit: () => {
+        gsap.set(list, { clearProps: 'transform' });
+
+        const nextMeasurements = measureVacanciesScroll(list, wrapper);
+        xDistance = nextMeasurements.xDistance;
+        pinDistance = nextMeasurements.pinDistance;
       },
+      onUpdate: (self) => {
+        gsap.set(list, { x: -xDistance * self.progress });
+      }
     });
 
     ScrollTrigger.sort();
     ScrollTrigger.refresh();
+  });
+}
+
+function measureVacanciesScroll(list, wrapper) {
+  const contentWidth = getVacanciesContentWidth(list);
+  const visibleWidth = getVacanciesVisibleWidth(list, wrapper);
+  const xDistance = Math.max(0, Math.ceil(contentWidth - visibleWidth + 160));
+
+  return {
+    xDistance,
+    pinDistance: Math.max(xDistance, Math.ceil(contentWidth))
+  };
+}
+
+function getVacanciesContentWidth(list) {
+  const items = Array.from(list.children);
+
+  if (!items.length) {
+    return 0;
+  }
+
+  const listRect = list.getBoundingClientRect();
+  const lastItemRect = items[items.length - 1].getBoundingClientRect();
+
+  return Math.max(list.scrollWidth, lastItemRect.right - listRect.left);
+}
+
+function getVacanciesVisibleWidth(list, wrapper) {
+  const listRect = list.getBoundingClientRect();
+  const wrapperRect = wrapper.getBoundingClientRect();
+  const visibleRight = Math.min(window.innerWidth, wrapperRect.right);
+
+  return Math.max(0, visibleRight - listRect.left);
+}
+
+function getVacanciesScrollDistance(list, wrapper) {
+  return measureVacanciesScroll(list, wrapper).xDistance;
+}
+
+function scheduleVacanciesScrollReinit() {
+  requestAnimationFrame(() => {
+    initVacanciesScroll();
+  });
+
+  setTimeout(() => {
+    initVacanciesScroll();
+  }, 100);
+
+  setTimeout(() => {
+    initVacanciesScroll();
+  }, 500);
+
+  if (document.readyState === 'complete') {
+    setTimeout(initVacanciesScroll, 0);
+  } else {
+    window.addEventListener('load', initVacanciesScroll, { once: true });
+  }
+
+  document.fonts?.ready?.then(() => {
+    initVacanciesScroll();
   });
 }
 
@@ -754,24 +1020,30 @@ function renderGallery(gallery) {
 
   container.innerHTML = '';
 
-  gallery.forEach((item) => {
-    container.appendChild(createGalleryImage(item));
-  });
+  gallery
+    .filter((item) => item.active !== false)
+    .forEach((item) => {
+      container.appendChild(createGalleryImage(item));
+    });
 }
 
 function createGalleryImage(item) {
   const div = document.createElement('div');
   div.className = 'gallery__item gallery__item--type-img';
 
-  const src = item.src || '';
-  const media = item.type === 'video'
-    ? `<video class="card card--rounded video-src" autoplay loop muted playsinline preload="auto" src="${src}" data-src="${src}"></video>`
+  const src = item.src || item.image || '';
+  const caption = item.caption || item.text || '';
+  const isVideo = item.type === 'video' || /\.(mp4|webm|mov)$/i.test(src);
+
+  const media = isVideo
+    ? `<video src="${src}" class="card card--rounded" autoplay loop muted playsinline></video>`
     : `<img src="${src}" alt="" class="card card--rounded">`;
 
   div.innerHTML = `
   ${media}
 
-  <p class="gallery__item-text">— ${item.caption || ''}</p>
+  <p class="gallery__item-text">— ${caption}
+  </p>
   `;
 
   return div;
@@ -779,16 +1051,25 @@ function createGalleryImage(item) {
 
 function renderWork(work) {
   const container = document.querySelector('.work__section--scroll');
+
+  if (!container || !Array.isArray(work)) {
+    return;
+  }
+
   container.innerHTML = '';
-  work.forEach((card) => {
-    container.appendChild(createWorkCard(card))
-  });
+
+  work
+    .filter((card) => card.active !== false)
+    .forEach((card) => {
+      container.appendChild(createWorkCard(card));
+    });
+
   const lastDiv = document.createElement('div');
   lastDiv.className = 'work__container work__container--text';
   lastDiv.innerHTML = `
   <p>
     Если твоя команда в другом городе, мы поддерживаем и оплачиваем поездки, чтобы вы могли
-    встретиться и пообщаться лично
+    встретиться и пообщаться лично 
   </p>
   `;
   container.appendChild(lastDiv);
@@ -805,7 +1086,7 @@ function createWorkCard(card) {
 
   <p class="work__card-text">
     <span class="work__card-text-line"></span>
-    ${card.caption || ''}
+    ${card.caption || card.text || ''}
   </p>
   `;
 
@@ -821,14 +1102,16 @@ function renderBenefits(benefits) {
 
   container.innerHTML = '';
 
-  benefits.forEach((benefit, index) => {
-    container.appendChild(createBenefitCard(benefit, index));
-  });
+  benefits
+    .filter((b) => b.active !== false)
+    .forEach((benefit, index) => {
+      container.appendChild(createBenefitCard(benefit, index));
+    });
 }
 
 function createBenefitCard(benefit, index) {
   const article = document.createElement('article');
-  article.className = `bonus__item bonus__item--${index + 1} card card--half - rounded card--default `;
+  article.className = `bonus__item bonus__item--${index + 1} card card--half-rounded card--default`;
 
   article.innerHTML = `
     <h3 class="card__title bonus__item-title">
@@ -867,7 +1150,255 @@ function renderForm(form) {
   `;
 
   const button = document.querySelector('.form__submit');
+
   if (button) {
-    button.textContent = 'Отправить';
+    button.textContent = form.submitLabel || 'Отправить';
   }
 }
+
+function getElements(root, selector) {
+  const elements = [];
+
+  if (root instanceof Element && root.matches(selector)) {
+    elements.push(root);
+  }
+
+  elements.push(...root.querySelectorAll(selector));
+
+  return elements;
+}
+
+function initVideos(root = document) {
+  getElements(root, '.video-src').forEach((video) => {
+    if (video.dataset.src) {
+      video.src = video.dataset.src;
+    }
+  });
+}
+
+function initAccordions(root = document) {
+  getElements(root, '.accordion').forEach((accordion) => {
+    if (accordion.dataset.accordionInited) {
+      return;
+    }
+
+    accordion.dataset.accordionInited = 'true';
+
+    accordion.addEventListener('mouseenter', () => {
+      if (window.innerWidth < 1326) {
+        return;
+      }
+
+      document.querySelectorAll('.accordion').forEach((item) => {
+        item.querySelector('.accordion__title span:not(.accordion__toggle)')?.classList.add('opacity');
+      });
+
+      accordion.querySelector('.accordion__title span:not(.accordion__toggle)')?.classList.remove('opacity');
+    });
+
+    accordion.addEventListener('mouseleave', () => {
+      if (window.innerWidth < 1326) {
+        return;
+      }
+
+      document.querySelectorAll('.accordion').forEach((item) => {
+        item.querySelector('.accordion__title span:not(.accordion__toggle)')?.classList.remove('opacity');
+      });
+    });
+
+    accordion.addEventListener('click', () => {
+      if (window.innerWidth >= 992) {
+        const isOpen = accordion.classList.contains('accordion--open');
+
+        document.querySelectorAll('.accordion').forEach((item) => {
+          item.classList.remove('accordion--open');
+        });
+
+        if (!isOpen) {
+          accordion.classList.add('accordion--open');
+        }
+      } else {
+        accordion.classList.toggle('accordion--open');
+      }
+
+      setTimeout(refreshScrollTriggers, 700);
+    });
+  });
+}
+
+function initIconBlocks(root = document) {
+  if (window.innerWidth < 1326) {
+    return;
+  }
+
+  getElements(root, '.icon-block').forEach((block) => {
+    if (block.dataset.iconBlockInited) {
+      return;
+    }
+
+    const icon = block.querySelector('.icon-block__icon');
+
+    if (!icon) {
+      return;
+    }
+
+    block.dataset.iconBlockInited = 'true';
+
+    icon.addEventListener('mouseenter', () => {
+      if (window.innerWidth < 1326) {
+        return;
+      }
+
+      const description = block.querySelector('.icon-block__description');
+
+      if (!description) {
+        return;
+      }
+
+      block.closest('.platform')?.classList.add('animation-end');
+
+      const distanceToRight = window.innerWidth - block.getBoundingClientRect().right;
+      const titleHeight = block.querySelector('.icon-block__description b')?.offsetHeight || 0;
+      const smallHeight = block.querySelector('.icon-block__description small')?.offsetHeight || 0;
+      const textHeight = block.querySelector('.icon-block__description p')?.offsetHeight || 0;
+
+      description.style.height = `${titleHeight + smallHeight + textHeight + 84}px`;
+
+      if (distanceToRight < 500) {
+        block.classList.add('open-left');
+        block.classList.remove('open-right');
+      } else {
+        block.classList.add('open-right');
+        block.classList.remove('open-left');
+      }
+    });
+
+    icon.addEventListener('mouseleave', () => {
+      const description = block.querySelector('.icon-block__description');
+
+      block.classList.remove('open-left', 'open-right');
+      description?.removeAttribute('style');
+    });
+  });
+}
+
+function initVacancyMetric(root = document) {
+  getElements(root, '.vacancies__item-lik').forEach((link) => {
+    if (link.dataset.metricInited) {
+      return;
+    }
+
+    link.dataset.metricInited = 'true';
+
+    link.addEventListener('click', () => {
+      window.ym?.(99071910, 'reachGoal', 'vacancy_ click');
+    });
+  });
+}
+
+function updateSwipers() {
+  const teamSlider = document.querySelector('.team__slider');
+  const brandsSlider = document.querySelector('.brands');
+
+  if (teamSlider?.swiper) {
+    teamSlider.swiper.update();
+  }
+
+  if (brandsSlider?.swiper) {
+    brandsSlider.swiper.update();
+  }
+}
+
+function initBenefitsAnimation() {
+  if (!window.gsap || !window.ScrollTrigger) {
+    return;
+  }
+
+  const title = document.querySelector('.bonus__title');
+  const items = document.querySelectorAll('.bonus__item');
+
+  ScrollTrigger.getAll().forEach((trigger) => {
+    const triggerSelector = trigger.vars?.trigger;
+    const triggerElement = typeof triggerSelector === 'string' ? null : triggerSelector;
+    const isBonusTrigger =
+      trigger.vars?.id === 'bonus-animation' ||
+      trigger.trigger?.closest?.('.bonus') ||
+      triggerElement?.closest?.('.bonus') ||
+      (typeof triggerSelector === 'string' && triggerSelector.includes('bonus__'));
+
+    if (isBonusTrigger) {
+      trigger.kill(true);
+    }
+  });
+
+  gsap.killTweensOf('.bonus__title');
+  gsap.killTweensOf('.bonus__item');
+  gsap.set('.bonus__title, .bonus__item', { clearProps: 'opacity,visibility' });
+
+  if (window.innerWidth < 992) {
+    ScrollTrigger.refresh();
+    return;
+  }
+
+  const itemRanges = [
+    ['top 70%', 'top 60%'],
+    ['top 60%', 'top 50%'],
+    ['top 45%', 'top 20%'],
+    ['top 80%', 'top 60%'],
+    ['top 70%', 'top 60%'],
+    ['top 60%', 'top 50%'],
+    ['top 90%', 'top 70%'],
+    ['top 70%', 'top 60%']
+  ];
+
+  items.forEach((item, index) => {
+    const [start, end] = itemRanges[index] || ['top 80%', 'top 60%'];
+
+    gsap.fromTo(item, { autoAlpha: 0 }, {
+      autoAlpha: 1,
+      scrollTrigger: {
+        id: 'bonus-animation',
+        trigger: item,
+        start,
+        end,
+        scrub: true
+      }
+    });
+  });
+
+  if (title) {
+    gsap.fromTo(title, { autoAlpha: 0 }, {
+      autoAlpha: 1,
+      scrollTrigger: {
+        id: 'bonus-animation',
+        trigger: title,
+        start: 'top 90%',
+        end: 'bottom 60%',
+        scrub: true
+      }
+    });
+  }
+
+  ScrollTrigger.refresh();
+}
+
+function reinitPageScripts(root = document) {
+  initVideos(root);
+  initAccordions(root);
+  initTeamSlider();
+  initTeamVkLogoHover(root);
+  initIconBlocks(root);
+  initVacancyMetric(root);
+  updateSwipers();
+  updatePlatformTimelineLayout();
+
+  initAdvantagesTitleAnimation();
+  initVacanciesScroll();
+  initGalleryAndWorkScroll();
+  initBenefitsAnimation();
+  refreshScrollTriggersAfterImagesLoad(document.querySelector('.gallery'), initGalleryAndWorkScroll);
+
+  refreshScrollTriggers();
+}
+
+window.reinitPageScripts = reinitPageScripts;

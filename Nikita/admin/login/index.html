@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в админ-панель</title>
+    <link href="../admin.css" rel="stylesheet">
+    <style>
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f6fa;
+        }
+        .login-card {
+            width: 320px;
+            padding: 32px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.08);
+        }
+        .login-card h1 { margin: 0 0 20px; font-size: 20px; }
+        .login-card label { display: block; margin: 12px 0 6px; font-size: 14px; }
+        .login-card input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d5d7de;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .login-card button {
+            margin-top: 20px;
+            width: 100%;
+            padding: 10px;
+            border: 0;
+            border-radius: 8px;
+            background: #2b7fff;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .login-card button:disabled { opacity: .6; cursor: default; }
+        .login-error {
+            margin-top: 12px;
+            color: #d33;
+            font-size: 13px;
+            min-height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-page">
+        <form class="login-card" id="login-form" autocomplete="on">
+            <h1>Вход в админ-панель</h1>
+            <label for="login">Логин</label>
+            <input id="login" name="login" type="text" autocomplete="username" required>
+            <label for="password">Пароль</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+            <button type="submit" id="submit">Войти</button>
+            <div class="login-error" id="error"></div>
+        </form>
+    </div>
+    <script src="login.js"></script>
+</body>
+</html>

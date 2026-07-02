@@ -387,7 +387,8 @@ async function addPosition(position) {
     if (!data.positions) data.positions = [];
     const newPosition = {
         id: getNextId(data.positions),
-        title: position.title.trim()
+        title: position.title.trim(),
+        active: position.active !== false
     };
     data.positions.push(newPosition);
     await writeData(data);
@@ -404,7 +405,8 @@ async function updatePosition(id, position) {
     }
     const updated = {
         ...data.positions[index],
-        title: position.title.trim()
+        title: position.title.trim(),
+        active: position.active !== false
     };
     data.positions[index] = updated;
     await writeData(data);
@@ -630,17 +632,9 @@ function validateContactForm(form) {
     if (typeof form.description !== 'string' || form.description.trim() === '') {
         throw validationError('Поле description обязательно и должно быть непустой строкой');
     }
-    if (!Array.isArray(form.directions)) {
-        throw validationError('Поле directions должно быть массивом строк');
+    if (typeof form.submitLabel !== 'string' || form.submitLabel.trim() === '') {
+        throw validationError('Поле submitLabel обязательно и должно быть непустой строкой');
     }
-    if (form.directions.length === 0) {
-        throw validationError('Поле directions должно содержать хотя бы один пункт');
-    }
-    form.directions.forEach((d, i) => {
-        if (typeof d !== 'string' || d.trim() === '') {
-            throw validationError(`directions[${i}] должен быть непустой строкой`);
-        }
-    });
 }
 
 async function updateContactForm(form) {
@@ -649,7 +643,7 @@ async function updateContactForm(form) {
     data.contactForm = {
         title: form.title,
         description: form.description,
-        directions: form.directions.slice()
+        submitLabel: form.submitLabel
     };
     await writeData(data);
     return data.contactForm;
