@@ -16,5 +16,17 @@
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "multer": "^2.2.0"
-  }
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikitosiron/Practice.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/nikitosiron/Practice/issues"
+  },
+  "homepage": "https://github.com/nikitosiron/Practice#readme"
 }

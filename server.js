@@ -67,12 +67,7 @@ function requireAuth(req, res, next) {
     }
     return res.status(401).json({ success: false, message: 'Требуется авторизация' });
 }
-// ─── File upload endpoint ─────────────────────────────────
-// Accepts image/* or video/* via multipart/form-data (field name "file").
-// Saves to travelline_site/upload/user-uploads/ with a random name so we don't
-// have to trust the client's originalname (path-traversal, collisions, non-ascii).
-// Returns the relative path the client can drop straight into any *.src / *.image
-// / *.photo / *.mark field.
+
 const UPLOAD_DIR = path.join(__dirname, 'travelline_site', 'upload', 'user-uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -87,7 +82,7 @@ const uploadStorage = multer.diskStorage({
 
 const upload = multer({
     storage: uploadStorage,
-    limits: { fileSize: 100 * 1024 * 1024 },  // 100 MB — big enough for the .mp4 gallery clips
+    limits: { fileSize: 100 * 1024 * 1024 },  
     fileFilter: (req, file, cb) => {
         if (/^(image|video)\//.test(file.mimetype)) return cb(null, true);
         cb(new Error('Разрешены только изображения и видео'));
@@ -169,7 +164,7 @@ app.get('/api/data', async (req, res) => {
         if (!data.brands) data.brands = [];
         if (!data.work) data.work = [];
         if (!data.directions) data.directions = [];
-        if (!data.contactForm) data.contactForm = { title: '', description: '', directions: [] };
+        if (!data.contactForm) data.contactForm = { title: '', description: '', submitLabel: '' };
         res.json(data);
     } catch (err) {
         console.error('Ошибка чтения data.json:', err);

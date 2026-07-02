@@ -229,7 +229,7 @@ function renderTeam(team) {
   container.innerHTML = '';
 
   team.forEach((member) => {
-    if (member.active) {
+    if (member.active !== false) {
       container.appendChild(createTeamCard(member));
     }
   });
