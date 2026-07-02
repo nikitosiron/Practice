@@ -17,6 +17,15 @@ function notFoundError(message) {
     return err;
 }
 
+function ensureHeroStatIds(hero) {
+    if (!hero || !Array.isArray(hero.stats)) return;
+    let nextId = hero.stats.reduce((max, s) => (typeof s.id === 'number' && s.id > max ? s.id : max), 0);
+    hero.stats.forEach(stat => {
+        if (typeof stat.id !== 'number') stat.id = ++nextId;
+        if (stat.active === undefined) stat.active = true;
+    });
+}
+
 async function updateHero(hero) {
     if (!hero || typeof hero !== 'object') {
         throw validationError('Тело запроса должно быть объектом hero');
@@ -24,14 +33,77 @@ async function updateHero(hero) {
     if (typeof hero.title !== 'string' || hero.title.trim() === '') {
         throw validationError('Поле title обязательно и должно быть непустой строкой');
     }
-    if (!Array.isArray(hero.stats)) {
-        throw validationError('Поле stats должно быть массивом');
-    }
 
     const data = await readData();
-    data.hero = { title: hero.title, stats: hero.stats };
+    data.hero.title = hero.title;
     await writeData(data);
     return data.hero;
+}
+
+function validateHeroStat(stat) {
+    if (!stat || typeof stat !== 'object') {
+        throw validationError('Тело запроса должно быть объектом показателя');
+    }
+    if (typeof stat.value !== 'string' || stat.value.trim() === '') {
+        throw validationError('Поле value обязательно и должно быть непустой строкой');
+    }
+    if (typeof stat.label !== 'string' || stat.label.trim() === '') {
+        throw validationError('Поле label обязательно и должно быть непустой строкой');
+    }
+}
+
+async function addHeroStat(stat) {
+    validateHeroStat(stat);
+    const data = await readData();
+    if (!data.hero) data.hero = { title: '', stats: [] };
+    if (!Array.isArray(data.hero.stats)) data.hero.stats = [];
+    ensureHeroStatIds(data.hero);
+    const newStat = {
+        id: getNextId(data.hero.stats),
+        value: stat.value,
+        label: stat.label,
+        active: stat.active !== false
+    };
+    data.hero.stats.push(newStat);
+    await writeData(data);
+    return newStat;
+}
+
+async function updateHeroStat(id, stat) {
+    validateHeroStat(stat);
+    const data = await readData();
+    if (!data.hero || !Array.isArray(data.hero.stats)) {
+        throw notFoundError(`Показатель с id=${id} не найден`);
+    }
+    ensureHeroStatIds(data.hero);
+    const index = data.hero.stats.findIndex(s => s.id === id);
+    if (index === -1) {
+        throw notFoundError(`Показатель с id=${id} не найден`);
+    }
+    const updated = {
+        ...data.hero.stats[index],
+        value: stat.value,
+        label: stat.label,
+        active: stat.active !== false
+    };
+    data.hero.stats[index] = updated;
+    await writeData(data);
+    return updated;
+}
+
+async function deleteHeroStat(id) {
+    const data = await readData();
+    if (!data.hero || !Array.isArray(data.hero.stats)) {
+        throw notFoundError(`Показатель с id=${id} не найден`);
+    }
+    ensureHeroStatIds(data.hero);
+    const index = data.hero.stats.findIndex(s => s.id === id);
+    if (index === -1) {
+        throw notFoundError(`Показатель с id=${id} не найден`);
+    }
+    const [removed] = data.hero.stats.splice(index, 1);
+    await writeData(data);
+    return removed;
 }
 
 function validateTeamMember(member) {
@@ -650,7 +722,7 @@ async function updateContactForm(form) {
 }
 
 module.exports = {
-    getNextId, updateHero, validationError, notFoundError,
+    getNextId, updateHero, addHeroStat, updateHeroStat, deleteHeroStat, ensureHeroStatIds, validationError, notFoundError,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addVacancy, updateVacancy, deleteVacancy,
     addBenefit, updateBenefit, deleteBenefit,

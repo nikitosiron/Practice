@@ -5,60 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход в админ-панель</title>
     <link href="../admin.css" rel="stylesheet">
-    <style>
-        .login-page {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f5f6fa;
-        }
-        .login-card {
-            width: 320px;
-            padding: 32px;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,.08);
-        }
-        .login-card h1 { margin: 0 0 20px; font-size: 20px; }
-        .login-card label { display: block; margin: 12px 0 6px; font-size: 14px; }
-        .login-card input {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #d5d7de;
-            border-radius: 8px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-        .login-card button {
-            margin-top: 20px;
-            width: 100%;
-            padding: 10px;
-            border: 0;
-            border-radius: 8px;
-            background: #2b7fff;
-            color: #fff;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .login-card button:disabled { opacity: .6; cursor: default; }
-        .login-error {
-            margin-top: 12px;
-            color: #d33;
-            font-size: 13px;
-            min-height: 18px;
-        }
-    </style>
 </head>
 <body>
     <div class="login-page">
         <form class="login-card" id="login-form" autocomplete="on">
-            <h1>Вход в админ-панель</h1>
-            <label for="login">Логин</label>
-            <input id="login" name="login" type="text" autocomplete="username" required>
-            <label for="password">Пароль</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" required>
-            <button type="submit" id="submit">Войти</button>
+            <div class="login-logo">
+                <span class="sidebar-logo-icon" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M5.0576 0.146258C4.39324 0.145608 3.73528 0.275983 3.12137 0.529921C2.50746 0.783859 1.94966 1.15637 1.47989 1.62615C1.01012 2.09592 0.637604 2.65372 0.383666 3.26763C0.129728 3.88154 -0.000647321 4.5395 2.41659e-06 5.20386V23.8537H18.6499C19.3142 23.8544 19.9722 23.724 20.5861 23.4701C21.2 23.2161 21.7578 22.8436 22.2276 22.3739C22.6974 21.9041 23.0699 21.3463 23.3238 20.7324C23.5778 20.1185 23.7081 19.4605 23.7075 18.7961V0.146258H5.0576Z" fill="white"/>
+                    </svg>
+                </span>
+                <div>
+                    <div class="login-logo-title">TravelLine</div>
+                    <div class="login-logo-sub">Админ-панель</div>
+                </div>
+            </div>
+
+            <h1 class="login-title">Вход в админ-панель</h1>
+
+            <label class="field-label" for="login">Логин</label>
+            <input class="field-input" id="login" name="login" type="text" autocomplete="username" required>
+
+            <label class="field-label" for="password">Пароль</label>
+            <input class="field-input" id="password" name="password" type="password" autocomplete="current-password" required>
+
+            <button class="btn primary login-submit" type="submit" id="submit">Войти</button>
             <div class="login-error" id="error"></div>
         </form>
     </div>

@@ -150,7 +150,7 @@ function renderHero(hero) {
   statsTitle.innerHTML = '';
   statsList.innerHTML = '';
 
-  hero.stats.forEach((stat) => {
+  hero.stats.filter((stat) => stat.active !== false).forEach((stat) => {
     const itemTitle = document.createElement('span');
     const item = document.createElement('li');
     const value = document.createElement('span');

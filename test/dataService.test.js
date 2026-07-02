@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { getNextId, addTeamMember, updateHero, addVacancy, addBenefit, addGalleryItem, addTimelineItem, addPosition, addBrand, addWorkItem, addDirection, updateContactForm } = require('../src/dataService');
+const { getNextId, addTeamMember, updateHero, addHeroStat, updateHeroStat, deleteHeroStat, addVacancy, addBenefit, addGalleryItem, addTimelineItem, addPosition, addBrand, addWorkItem, addDirection, updateContactForm } = require('../src/dataService');
 
 test('getNextId: пустой массив -> 1', () => {
     assert.strictEqual(getNextId([]), 1);
@@ -39,10 +39,31 @@ test('updateHero: пустой title -> ошибка 400', async () => {
     );
 });
 
-test('updateHero: stats не массив -> ошибка 400', async () => {
+test('addHeroStat: без value -> ошибка 400', async () => {
     await assert.rejects(
-        () => updateHero({ title: 'Заголовок', stats: 'не массив' }),
+        () => addHeroStat({ label: 'подпись' }),
         (err) => err.status === 400
+    );
+});
+
+test('addHeroStat: без label -> ошибка 400', async () => {
+    await assert.rejects(
+        () => addHeroStat({ value: '300+' }),
+        (err) => err.status === 400
+    );
+});
+
+test('updateHeroStat: не существующий id -> ошибка 404', async () => {
+    await assert.rejects(
+        () => updateHeroStat(999999, { value: 'v', label: 'l' }),
+        (err) => err.status === 404
+    );
+});
+
+test('deleteHeroStat: не существующий id -> ошибка 404', async () => {
+    await assert.rejects(
+        () => deleteHeroStat(999999),
+        (err) => err.status === 404
     );
 });
 

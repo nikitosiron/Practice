@@ -637,12 +637,19 @@ textarea.field-input {
 .data-table .table-actions {
     display: flex;
     gap: 6px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.data-table td:has(.table-actions) {
+    white-space: nowrap;
+    width: 1%;
 }
 
 .data-table .table-actions .btn {
     padding: 7px 14px;
     font-size: 12px;
+    flex-shrink: 0;
 }
 
 .table-input {
@@ -817,6 +824,79 @@ textarea.field-input {
         align-items: flex-start;
         gap: 10px;
     }
+}
+
+/* ── Страница логина ────────────────────────────────── */
+
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 380px;
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 24px 64px rgba(18, 32, 59, .1);
+}
+
+.login-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.login-logo-title {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-strong);
+    line-height: 1.2;
+}
+
+.login-logo-sub {
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.login-title {
+    margin: 0 0 20px;
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-strong);
+}
+
+.login-submit {
+    margin-top: 20px;
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+}
+
+.login-submit:disabled {
+    opacity: .6;
+    cursor: default;
+}
+
+.login-error {
+    margin-top: 12px;
+    color: var(--danger);
+    font-family: var(--font-body);
+    font-size: 13px;
+    min-height: 18px;
 }
 
 /* ── Модальное окно ─────────────────────────────────── */

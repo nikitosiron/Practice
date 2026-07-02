@@ -121,14 +121,18 @@
                     <input type="text" class="field-input hero__title" id="hero-title" value="">
                 </div>
 
-                <h3 class="subsection-title">Ключевые показатели</h3>
-                <div class="stats-list advantages__list" id="hero-stats"></div>
-
                 <div class="section-actions">
-                    <button type="button" class="btn add" id="hero-add-stat">+ Добавить показатель</button>
                     <button type="button" class="btn" id="hero-undo" title="Отменить последнее сохранение блока">↩ Отменить</button>
-                    <button type="button" class="btn primary" id="hero-save">Сохранить раздел</button>
+                    <button type="button" class="btn primary" id="hero-save">Сохранить заголовок</button>
                 </div>
+
+                <h3 class="subsection-title">Ключевые показатели</h3>
+                <div class="section-toolbar">
+                    <button type="button" class="btn primary" id="heroStats-add">➕ Добавить показатель</button>
+                    <input type="text" class="field-input search-input" id="heroStats-search" placeholder="Поиск по значению или подписи...">
+                    <button type="button" class="btn" id="heroStats-undo" title="Отменить последнее действие в этом блоке">↩ Отменить</button>
+                </div>
+                <div class="table-wrap" id="heroStats-table-wrap"></div>
             </section>
 
             <section class="block team-section" data-block="team" id="team">

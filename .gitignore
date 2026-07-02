@@ -17,3 +17,6 @@ Thumbs.db
 .env
 
 NOTES.md
+
+# Локальные конфиги для запуска (VS Code launch и подобные)
+.claude/

@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const { readData } = require('./src/storage');
 const {
-    updateHero,
+    updateHero, addHeroStat, updateHeroStat, deleteHeroStat, ensureHeroStatIds,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addVacancy, updateVacancy, deleteVacancy,
     addBenefit, updateBenefit, deleteBenefit,
@@ -53,6 +53,9 @@ app.use('/api', (req, res, next) => {
 app.use(express.static(path.join(__dirname, 'travelline_site')));
 
 app.use('/admin/login', express.static(path.join(__dirname, 'admin', 'login')));
+app.get('/admin/admin.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin', 'admin.css'));
+});
 
 app.use('/admin', (req, res, next) => {
     if (req.session && req.session.isAdmin) return next();
@@ -165,6 +168,7 @@ app.get('/api/data', async (req, res) => {
         if (!data.work) data.work = [];
         if (!data.directions) data.directions = [];
         if (!data.contactForm) data.contactForm = { title: '', description: '', submitLabel: '' };
+        if (data.hero) ensureHeroStatIds(data.hero);
         res.json(data);
     } catch (err) {
         console.error('Ошибка чтения data.json:', err);
@@ -178,6 +182,50 @@ app.put('/api/hero', async (req, res) => {
         res.json({ success: true, data: updated });
     } catch (err) {
         console.error('PUT /api/hero:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.post('/api/hero/stats', async (req, res) => {
+    try {
+        const created = await addHeroStat(req.body);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        console.error('POST /api/hero/stats:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.put('/api/hero/stats/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const updated = await updateHeroStat(id, req.body);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('PUT /api/hero/stats/:id:', err);
+        const status = err.status || 500;
+        const message = err.status ? err.message : 'Внутренняя ошибка сервера';
+        res.status(status).json({ success: false, message });
+    }
+});
+
+app.delete('/api/hero/stats/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ success: false, message: 'id должен быть числом' });
+        }
+        const removed = await deleteHeroStat(id);
+        res.json({ success: true, data: removed });
+    } catch (err) {
+        console.error('DELETE /api/hero/stats/:id:', err);
         const status = err.status || 500;
         const message = err.status ? err.message : 'Внутренняя ошибка сервера';
         res.status(status).json({ success: false, message });

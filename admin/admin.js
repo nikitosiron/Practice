@@ -245,79 +245,27 @@ function wireUndoButton(block) {
     }
 }
 
-// ─── Hero (форма-одиночка, редактируется на месте) ──────────
+// ─── Hero: заголовок редактируется здесь, показатели — через blockConfigs.heroStats ─
 
 function renderHeroForm(hero) {
-    document.querySelector('#hero-title').value = hero.title;
-
-    var statsList = document.querySelector('#hero-stats');
-    statsList.innerHTML = '';
-    for (var i = 0; i < hero.stats.length; i++) {
-        statsList.appendChild(buildStatRow(hero.stats[i]));
-    }
-}
-
-function buildStatRow(stat) {
-    var row = document.createElement('div');
-    row.className = 'stats-row advantages__item';
-
-    var value = document.createElement('input');
-    value.type = 'text';
-    value.className = 'field-input stats-value advantages__item-title';
-    value.value = stat.value;
-    row.appendChild(value);
-
-    var label = document.createElement('input');
-    label.type = 'text';
-    label.className = 'field-input stats-label';
-    label.value = stat.label;
-    row.appendChild(label);
-
-    var del = document.createElement('button');
-    del.className = 'btn danger small';
-    del.textContent = 'Удалить';
-    del.addEventListener('click', function () {
-        row.remove();
-    });
-    row.appendChild(del);
-
-    return row;
-}
-
-function collectHeroData() {
-    var title = document.querySelector('#hero-title').value;
-    var stats = [];
-    var rows = document.querySelectorAll('#hero-stats .stats-row');
-    for (var i = 0; i < rows.length; i++) {
-        stats.push({
-            value: rows[i].querySelector('.stats-value').value,
-            label: rows[i].querySelector('.stats-label').value
-        });
-    }
-    return { title: title, stats: stats };
+    document.querySelector('#hero-title').value = hero.title || '';
 }
 
 function saveHero() {
-    var data = collectHeroData();
+    var title = document.querySelector('#hero-title').value;
 
-    if (data.title.trim() === '') {
+    if (title.trim() === '') {
         showStatus('Заполните заголовок', 'error');
         return;
     }
-    for (var i = 0; i < data.stats.length; i++) {
-        if (data.stats[i].value.trim() === '' || data.stats[i].label.trim() === '') {
-            showStatus('Заполните все поля статистики', 'error');
-            return;
-        }
-    }
 
-    var previous = cachedHero;
+    var previousTitle = cachedHero.title;
 
-    apiRequest('PUT', '/api/hero', data)
+    apiRequest('PUT', '/api/hero', { title: title })
         .then(parseApiResponse)
         .then(function () {
-            pushUndo('hero', 'изменение блока «О нас»', function () {
-                return apiRequest('PUT', '/api/hero', previous).then(parseApiResponse);
+            pushUndo('hero', 'изменение заголовка «О нас»', function () {
+                return apiRequest('PUT', '/api/hero', { title: previousTitle }).then(parseApiResponse);
             });
             showStatus('Сохранено');
             isDirty = false;
@@ -326,13 +274,6 @@ function saveHero() {
         .catch(function (error) {
             showStatus('Ошибка сохранения: ' + error.message, 'error');
         });
-}
-
-function addStat() {
-    var statsList = document.querySelector('#hero-stats');
-    var row = buildStatRow({ value: '', label: '' });
-    statsList.appendChild(row);
-    row.querySelector('.stats-value').focus();
 }
 
 // ─── Хелперы для форм ───────────────────────────────────────
@@ -1078,6 +1019,39 @@ var TIMELINE_MARKS = [
 
 var blockConfigs = {
 
+    heroStats: {
+        api: '/api/hero/stats',
+        addTitle: 'Новый показатель',
+        editTitle: 'Редактирование показателя',
+        deleteConfirm: 'Удалить показатель?',
+        searchFields: ['value', 'label'],
+        getCache: function () { return (cachedHero && cachedHero.stats) ? cachedHero.stats : []; },
+        columns: [
+            { label: 'Значение', sortValue: function (s) { return s.value || ''; }, render: function (s) { return textCell(s.value); } },
+            { label: 'Подпись', sortValue: function (s) { return s.label || ''; }, render: function (s) { return truncCell(s.label); } }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Значение (например, «300+»)', 'hero-stat-value', item.value));
+            form.appendChild(buildField('Подпись', 'hero-stat-label', item.label));
+            return form;
+        },
+        collect: function (form) {
+            return {
+                value: form.querySelector('.hero-stat-value').value,
+                label: form.querySelector('.hero-stat-label').value
+            };
+        },
+        validate: function (data) {
+            if (data.value.trim() === '' || data.label.trim() === '') {
+                return 'Заполните значение и подпись показателя';
+            }
+            return null;
+        },
+        defaults: function () { return { value: '', label: '' }; },
+        toPayload: function (s) { return { value: s.value, label: s.label }; }
+    },
+
     team: {
         api: '/api/team',
         addTitle: 'Новый сотрудник',
@@ -1616,7 +1590,6 @@ function findById(arr, id) {
 // ─── Привязка кнопок и запуск ───────────────────────────────
 
 function wireStaticButtons() {
-    document.querySelector('#hero-add-stat').addEventListener('click', addStat);
     document.querySelector('#hero-save').addEventListener('click', saveHero);
 
     for (var name in blockConfigs) {
