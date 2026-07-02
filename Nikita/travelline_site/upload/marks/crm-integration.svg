@@ -1,6 +1,0 @@
-<svg class="icon-block__img" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
-  <circle cx="20.0007" cy="19.9999" r="6.66667" stroke="white" stroke-width="3" />
-  <path d="M33.334 20H38.334" stroke="white" stroke-width="3" stroke-linejoin="round" />
-  <path d="M1.66602 20H13.3327" stroke="white" stroke-width="3" stroke-linejoin="round" />
-  <path d="M9.45604 15C11.3285 11.0584 15.346 8.33333 20 8.33333C26.4433 8.33333 31.6667 13.5567 31.6667 20C31.6667 26.4433 26.4433 31.6667 20 31.6667C15.346 31.6667 11.3285 28.9416 9.45604 25H5.85352C7.9127 30.826 13.4689 35 20 35C28.2843 35 35 28.2843 35 20C35 11.7157 28.2843 5 20 5C13.4689 5 7.9127 9.17404 5.85352 15H9.45604Z" fill="white" />
-</svg>

@@ -1,7 +1,0 @@
-<svg class="icon-block__img" xmlns="http://www.w3.org/2000/svg" width="44" height="32" viewBox="0 0 44 32" fill="none">
-  <path d="M18 18V6H26V18" stroke="white" stroke-width="3" />
-  <path d="M26 8C26 4.68629 28.6863 2 32 2C34.7483 2 37.0629 3.84619 37.7734 6.36719L41.7656 20.0547M18 8C18 4.68629 15.3137 2 12 2C9.25171 2 6.93715 3.84619 6.22656 6.36719L2.23438 20.0547" stroke="white" stroke-width="3" stroke-linejoin="round" />
-  <circle cx="34" cy="22" r="8" stroke="white" stroke-width="3" stroke-linejoin="round" />
-  <circle cx="8" cy="8" r="8" transform="matrix(-1 0 0 1 18 14)" stroke="white" stroke-width="3" stroke-linejoin="round" />
-  <path d="M18 18H26" stroke="white" stroke-width="3" stroke-linejoin="round" />
-</svg>

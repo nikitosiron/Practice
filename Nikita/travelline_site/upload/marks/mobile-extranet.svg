@@ -1,9 +1,0 @@
-<svg class="icon-block__img" xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" fill="none">
-  <path d="M2 12C2 6.47715 6.47715 2 12 2H42V32C42 37.5228 37.5228 42 32 42H2V12Z" stroke="white" stroke-width="3" />
-  <circle cx="13" cy="13" r="3" fill="white" />
-  <circle cx="22" cy="13" r="3" fill="white" />
-  <circle cx="31" cy="13" r="3" fill="white" />
-  <circle cx="22" cy="22" r="3" fill="white" />
-  <circle cx="22" cy="31" r="3" fill="white" />
-  <circle cx="31" cy="31" r="3" fill="white" />
-</svg>

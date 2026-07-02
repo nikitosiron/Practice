@@ -1,6 +1,0 @@
-<svg class="icon-block__img" xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" fill="none">
-  <circle cx="18" cy="18" r="18" transform="matrix(-1 0 0 1 38 2)" stroke="white" stroke-width="3" stroke-linejoin="round" />
-  <path d="M42 42L32 32" stroke="white" stroke-width="3" stroke-linejoin="round" />
-  <path d="M28 17L28.9 15.8L29.5 16.25V17H28ZM12 17H10.5V16.25L11.1 15.8L12 17ZM12 28V29.5C11.1716 29.5 10.5 28.8284 10.5 28H12ZM28 28H29.5C29.5 28.8284 28.8284 29.5 28 29.5V28ZM20 11L19.1 9.8L20 9.125L20.9 9.8L20 11ZM13.5 17V28H10.5V17H13.5ZM12 26.5H28V29.5H12V26.5ZM26.5 28V17H29.5V28H26.5ZM27.1 18.2L19.1 12.2L20.9 9.8L28.9 15.8L27.1 18.2ZM20.9 12.2L12.9 18.2L11.1 15.8L19.1 9.8L20.9 12.2Z" fill="white" />
-  <path d="M20 22L20 26" stroke="white" stroke-width="3" stroke-linejoin="round" />
-</svg>
