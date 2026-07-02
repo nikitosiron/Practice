@@ -818,3 +818,186 @@ textarea.field-input {
         gap: 10px;
     }
 }
+
+/* ── Модальное окно ─────────────────────────────────── */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(18, 32, 59, .55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 64px rgba(18, 32, 59, .3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 0;
+}
+
+.modal-title {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-strong);
+}
+
+.modal-close {
+    border: none;
+    background: none;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+
+.modal-close:hover {
+    background: var(--surface-soft);
+    color: var(--text-strong);
+}
+
+.modal-body {
+    padding: 8px 24px 4px;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px 24px;
+}
+
+/* ── Кнопки-иконки в таблицах ───────────────────────── */
+
+.btn.icon {
+    padding: 6px 10px;
+    font-size: 15px;
+    line-height: 1;
+    background: #fff;
+    border-color: var(--border);
+}
+
+.btn.icon:hover {
+    background: var(--surface-soft);
+    border-color: var(--primary);
+    color: inherit;
+}
+
+/* ── Сортировка и ячейки таблиц ─────────────────────── */
+
+.data-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.data-table th.sortable:hover {
+    color: var(--primary);
+}
+
+.data-table tr.row-inactive td {
+    opacity: .55;
+}
+
+.table-thumb {
+    width: 52px;
+    height: 52px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+    display: block;
+}
+
+.table-thumb--logo {
+    object-fit: contain;
+    padding: 6px;
+}
+
+.table-video-mark {
+    font-size: 24px;
+    line-height: 52px;
+}
+
+.cell-truncate {
+    display: inline-block;
+    max-width: 340px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+.table-link {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.table-link:hover {
+    text-decoration: underline;
+}
+
+.table-empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 28px 14px !important;
+}
+
+/* ── Карточки сотрудников (режим просмотра) ─────────── */
+
+.team-view-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.team-card-photo {
+    width: 100%;
+    height: 260px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+}
+
+.team-view-name {
+    margin: 4px 0 0;
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-strong);
+}
+
+.team-view-position {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.team-view-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    gap: 10px;
+    flex-wrap: wrap;
+}

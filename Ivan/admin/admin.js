@@ -1,3 +1,5 @@
+// ─── Базовые утилиты ────────────────────────────────────────
+
 function showStatus(message, type) {
     if (type === undefined) {
         type = 'success';
@@ -19,6 +21,9 @@ function apiRequest(method, url, data) {
     return fetch(url, options);
 }
 
+// Сервер всегда отвечает JSON вида { success, data } или { success: false, message }.
+// Если success === false — бросаем Error с реальным текстом от сервера,
+// и он улетает в .catch() цепочки.
 function parseApiResponse(response) {
     return response.json().then(function (body) {
         if (!body.success) {
@@ -28,9 +33,14 @@ function parseApiResponse(response) {
     });
 }
 
+// ─── Кэш данных ─────────────────────────────────────────────
+
+var cachedHero = { title: '', stats: [] };
+var cachedContactForm = { title: '', description: '', directions: [] };
 var cachedPositions = [];
 var cachedTeam = [];
 var cachedVacancies = [];
+var cachedBenefits = [];
 var cachedGallery = [];
 var cachedTimeline = [];
 var cachedBrands = [];
@@ -46,26 +56,21 @@ function loadData() {
             return response.json();
         })
         .then(function (data) {
+            cachedHero = data.hero || { title: '', stats: [] };
+            cachedContactForm = data.contactForm || { title: '', description: '', directions: [] };
             cachedPositions = data.positions || [];
             cachedTeam = data.team || [];
             cachedVacancies = data.vacancies || [];
+            cachedBenefits = data.benefits || [];
             cachedGallery = data.gallery || [];
             cachedTimeline = data.timeline || [];
             cachedBrands = data.brands || [];
             cachedWork = data.work || [];
             cachedDirections = data.directions || [];
 
-            renderHeroForm(data.hero);
-            renderTeam(cachedTeam);
-            renderVacancies(cachedVacancies);
-            renderBenefits(data.benefits);
-            renderPositions(cachedPositions);
-            renderGallery(cachedGallery);
-            renderTimeline(cachedTimeline);
-            renderBrands(cachedBrands);
-            renderWork(cachedWork);
-            renderDirections(cachedDirections);
-            renderContactForm(data.contactForm || { title: '', description: '', directions: [] });
+            renderHeroForm(cachedHero);
+            renderContactForm(cachedContactForm);
+            renderAllBlocks();
             updateStatCards(data);
             isDirty = false;
         })
@@ -74,6 +79,14 @@ function loadData() {
         });
 }
 
+function renderAllBlocks() {
+    for (var name in blockConfigs) {
+        renderBlock(name);
+    }
+}
+
+// ─── Навигация ──────────────────────────────────────────────
+
 var isDirty = false;
 
 var sectionLabels = {
@@ -81,12 +94,12 @@ var sectionLabels = {
     team: 'Сотрудники',
     positions: 'Должности',
     timeline: 'Таймлайн платформы',
-    vacancies: 'Вакансии',
-    benefits: 'Плюшки',
-    gallery: 'Фотогалерея',
     brands: 'Партнёры',
-    work: 'Офисы',
     directions: 'Направления',
+    vacancies: 'Вакансии',
+    gallery: 'Фотогалерея',
+    work: 'Офисы',
+    benefits: 'Плюшки',
     'contact-form': 'Контактная форма'
 };
 
@@ -133,15 +146,96 @@ function updateStatCards(data) {
     document.querySelector('#stat-benefits').textContent = data.benefits.length;
 }
 
+// Отмечаем «есть несохранённые изменения» при вводе в Hero и контактной форме.
+// Таблицы read-only, а редактирование карточек идёт через модалку —
+// там свои кнопки Сохранить/Отмена. Поля поиска тоже не считаются.
 function wireDirtyTracking() {
     document.body.addEventListener('input', function (event) {
-        if (event.target.matches('input, textarea, select')) {
+        var target = event.target;
+        if (target.closest && target.closest('#modal-overlay')) return;
+        if (target.classList && target.classList.contains('search-input')) return;
+        if (target.matches('input, textarea, select')) {
             isDirty = true;
         }
     });
 }
 
-// ─── Hero ───────────────────────────────────────────────────
+// ─── Отмена действий (undo) ─────────────────────────────────
+// Перед каждым изменением через API запоминаем обратную операцию:
+//   изменение  → PUT со старыми значениями
+//   добавление → DELETE созданной записи
+//   удаление   → POST с прежними полями (id будет новый — это ограничение
+//                REST-API: сервер сам выдаёт id при создании)
+// Кнопка «Отменить» в блоке откатывает последнее действие этого блока,
+// Ctrl+Z — последнее действие где угодно.
+
+var undoStack = [];
+
+function pushUndo(block, label, undoFn) {
+    undoStack.push({ block: block, label: label, undo: undoFn });
+    if (undoStack.length > 30) {
+        undoStack.shift();
+    }
+}
+
+function runUndo(entry) {
+    entry.undo()
+        .then(function () {
+            showStatus('Отменено: ' + entry.label);
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Не удалось отменить: ' + error.message, 'error');
+        });
+}
+
+function performBlockUndo(block) {
+    for (var i = undoStack.length - 1; i >= 0; i--) {
+        if (undoStack[i].block === block) {
+            var entry = undoStack.splice(i, 1)[0];
+            runUndo(entry);
+            return;
+        }
+    }
+    showStatus('Нет действий для отмены в этом блоке');
+}
+
+function performGlobalUndo() {
+    if (undoStack.length === 0) {
+        showStatus('Нет действий для отмены');
+        return;
+    }
+    runUndo(undoStack.pop());
+}
+
+function wireUndo() {
+    for (var name in blockConfigs) {
+        wireUndoButton(name);
+    }
+    wireUndoButton('hero');
+    wireUndoButton('contact-form');
+
+    document.addEventListener('keydown', function (event) {
+        var isUndoKey = (event.ctrlKey || event.metaKey) &&
+            (event.key === 'z' || event.key === 'Z' || event.key === 'я' || event.key === 'Я');
+        if (!isUndoKey) return;
+        var t = event.target;
+        if (t && t.matches && t.matches('input, textarea, select')) return;
+        event.preventDefault();
+        performGlobalUndo();
+    });
+}
+
+function wireUndoButton(block) {
+    var btn = document.querySelector('#' + block + '-undo');
+    if (btn) {
+        btn.addEventListener('click', function () {
+            performBlockUndo(block);
+        });
+    }
+}
+
+// ─── Hero (форма-одиночка, редактируется на месте) ──────────
 
 function renderHeroForm(hero) {
     document.querySelector('#hero-title').value = hero.title;
@@ -207,11 +301,17 @@ function saveHero() {
         }
     }
 
+    var previous = cachedHero;
+
     apiRequest('PUT', '/api/hero', data)
         .then(parseApiResponse)
         .then(function () {
+            pushUndo('hero', 'изменение блока «О нас»', function () {
+                return apiRequest('PUT', '/api/hero', previous).then(parseApiResponse);
+            });
             showStatus('Сохранено');
             isDirty = false;
+            loadData();
         })
         .catch(function (error) {
             showStatus('Ошибка сохранения: ' + error.message, 'error');
@@ -225,7 +325,7 @@ function addStat() {
     row.querySelector('.stats-value').focus();
 }
 
-// ─── Универсальные хелперы ──────────────────────────────────
+// ─── Хелперы для форм ───────────────────────────────────────
 
 function buildField(labelText, extraClasses, value, dataSocial) {
     var fragment = document.createDocumentFragment();
@@ -237,13 +337,30 @@ function buildField(labelText, extraClasses, value, dataSocial) {
     var input = document.createElement('input');
     input.type = 'text';
     input.className = 'field-input' + (extraClasses ? ' ' + extraClasses : '');
-    input.value = value;
+    input.value = value == null ? '' : value;
     if (dataSocial) {
         input.dataset.social = dataSocial;
     }
 
     fragment.appendChild(label);
     fragment.appendChild(input);
+    return fragment;
+}
+
+function buildTextareaField(labelText, extraClasses, value, rows) {
+    var fragment = document.createDocumentFragment();
+
+    var label = document.createElement('label');
+    label.className = 'field-label';
+    label.textContent = labelText;
+
+    var area = document.createElement('textarea');
+    area.className = 'field-input' + (extraClasses ? ' ' + extraClasses : '');
+    area.rows = rows || 3;
+    area.value = value == null ? '' : value;
+
+    fragment.appendChild(label);
+    fragment.appendChild(area);
     return fragment;
 }
 
@@ -269,6 +386,8 @@ function buildSelectField(labelText, extraClasses, currentValue, options) {
         select.appendChild(opt);
     }
 
+    // Если текущее значение не входит в список (например, должность удалили),
+    // не теряем его молча, а показываем отдельным пунктом.
     if (!hasMatch && currentValue) {
         var customOpt = document.createElement('option');
         customOpt.value = currentValue;
@@ -282,25 +401,6 @@ function buildSelectField(labelText, extraClasses, currentValue, options) {
     return fragment;
 }
 
-function buildCardActions(onSave, onDelete) {
-    var actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    var save = document.createElement('button');
-    save.className = 'btn primary small';
-    save.textContent = 'Сохранить';
-    save.addEventListener('click', onSave);
-    actions.appendChild(save);
-
-    var del = document.createElement('button');
-    del.className = 'btn danger small';
-    del.textContent = 'Удалить';
-    del.addEventListener('click', onDelete);
-    actions.appendChild(del);
-
-    return actions;
-}
-
 function buildActiveBadge(active) {
     var badge = document.createElement('span');
     var isActive = active !== false;
@@ -309,82 +409,373 @@ function buildActiveBadge(active) {
     return badge;
 }
 
-function buildToggleButton(active, onToggle) {
-    var btn = document.createElement('button');
-    var isActive = active !== false;
-    btn.className = 'btn status-btn small';
-    btn.textContent = isActive ? 'Деактивировать' : 'Активировать';
-    btn.addEventListener('click', onToggle);
-    return btn;
+// ─── Модальное окно ─────────────────────────────────────────
+// Одно на всю админку: openModal подставляет заголовок, содержимое
+// и обработчик кнопки «Сохранить». Закрытие — крестик, «Отмена»,
+// клик по подложке или Esc.
+
+var modalSaveHandler = null;
+
+function openModal(title, bodyEl, onSave) {
+    document.querySelector('#modal-title').textContent = title;
+    var body = document.querySelector('#modal-body');
+    body.innerHTML = '';
+    body.appendChild(bodyEl);
+    modalSaveHandler = onSave;
+    document.querySelector('#modal-overlay').style.display = 'flex';
 }
 
-// ─── Команда ────────────────────────────────────────────────
-
-function getTeamViewMode() {
-    return localStorage.getItem('teamViewMode') || 'cards';
+function closeModal() {
+    document.querySelector('#modal-overlay').style.display = 'none';
+    document.querySelector('#modal-body').innerHTML = '';
+    modalSaveHandler = null;
 }
 
-function setTeamViewMode(mode) {
-    localStorage.setItem('teamViewMode', mode);
-}
-
-function filterTeam(team, query) {
-    if (!query) return team;
-    var q = query.toLowerCase();
-    return team.filter(function (m) {
-        return (m.name && m.name.toLowerCase().indexOf(q) !== -1) ||
-               (m.position && m.position.toLowerCase().indexOf(q) !== -1);
+function wireModal() {
+    document.querySelector('#modal-save').addEventListener('click', function () {
+        if (modalSaveHandler) modalSaveHandler();
+    });
+    document.querySelector('#modal-cancel').addEventListener('click', closeModal);
+    document.querySelector('#modal-close').addEventListener('click', closeModal);
+    document.querySelector('#modal-overlay').addEventListener('click', function (event) {
+        if (event.target === this) closeModal();
+    });
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && document.querySelector('#modal-overlay').style.display !== 'none') {
+            closeModal();
+        }
     });
 }
 
-function renderTeam(team) {
-    var query = document.querySelector('#team-search').value;
-    var filtered = filterTeam(team, query);
-    var mode = getTeamViewMode();
+// ─── Хелперы для таблиц ─────────────────────────────────────
 
-    var cardsList = document.querySelector('#team-list');
-    var tableWrap = document.querySelector('#team-table-wrap');
-
-    if (mode === 'table') {
-        cardsList.style.display = 'none';
-        tableWrap.style.display = 'block';
-        renderTeamTable(filtered);
-    } else {
-        cardsList.style.display = '';
-        tableWrap.style.display = 'none';
-        renderTeamCards(filtered);
-    }
-
-    updateViewToggle(mode);
+function textCell(text) {
+    var span = document.createElement('span');
+    span.textContent = text == null ? '' : text;
+    return span;
 }
 
-function renderTeamCards(team) {
-    var list = document.querySelector('#team-list');
-    list.innerHTML = '';
-    for (var i = 0; i < team.length; i++) {
-        list.appendChild(buildTeamCard(team[i], i + 1));
-    }
+function truncCell(text) {
+    var span = document.createElement('span');
+    span.className = 'cell-truncate';
+    span.textContent = text == null ? '' : text;
+    span.title = text == null ? '' : text;
+    return span;
 }
 
-function renderTeamTable(team) {
-    var tbody = document.querySelector('#team-table-body');
-    tbody.innerHTML = '';
-    for (var i = 0; i < team.length; i++) {
-        tbody.appendChild(buildTeamRow(team[i]));
-    }
+function imgCell(src, alt, isLogo) {
+    var img = document.createElement('img');
+    img.className = 'table-thumb' + (isLogo ? ' table-thumb--logo' : '');
+    img.src = resolveSitePath(src || 'upload/placeholder-avatar.svg');
+    img.alt = alt || '';
+    return img;
 }
 
-function updateViewToggle(mode) {
-    var cardsBtn = document.querySelector('#view-cards');
-    var tableBtn = document.querySelector('#view-table');
-    if (mode === 'table') {
-        cardsBtn.classList.remove('active');
-        tableBtn.classList.add('active');
-    } else {
-        cardsBtn.classList.add('active');
-        tableBtn.classList.remove('active');
-    }
+function linkCell(url) {
+    var a = document.createElement('a');
+    a.href = url || '#';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.className = 'cell-truncate table-link';
+    a.textContent = url || '';
+    a.title = url || '';
+    return a;
 }
+
+function buildIconButton(symbol, titleText, onClick) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn icon';
+    btn.textContent = symbol;
+    btn.title = titleText;
+    btn.addEventListener('click', onClick);
+    return btn;
+}
+
+// Кнопки-действия строки: редактировать / (де)активировать / удалить.
+function buildRowActions(name, item) {
+    var cfg = blockConfigs[name];
+    var box = document.createElement('div');
+    box.className = 'table-actions';
+
+    box.appendChild(buildIconButton('✏️', 'Редактировать', function () {
+        openBlockEditModal(name, item.id);
+    }));
+
+    if (cfg.hasActive !== false) {
+        var isActive = item.active !== false;
+        box.appendChild(buildIconButton(
+            isActive ? '🚫' : '✅',
+            isActive ? 'Деактивировать (скрыть на сайте)' : 'Активировать (показать на сайте)',
+            function () { toggleBlockItemActive(name, item.id); }
+        ));
+    }
+
+    box.appendChild(buildIconButton('🗑️', 'Удалить', function () {
+        deleteBlockItem(name, item.id);
+    }));
+
+    return box;
+}
+
+// ─── Поиск и сортировка ─────────────────────────────────────
+// Поиск: у каждого блока есть поле #<имя>-search, фильтрация идёт
+// по полям из cfg.searchFields (без запроса к серверу, по кэшу).
+// Сортировка: клик по заголовку сортируемой колонки (▲/▼).
+
+function getBlockItems(name) {
+    var cfg = blockConfigs[name];
+    var items = cfg.getCache();
+    var input = document.querySelector('#' + name + '-search');
+    if (input && input.value.trim() !== '') {
+        var q = input.value.trim().toLowerCase();
+        items = items.filter(function (item) {
+            for (var i = 0; i < cfg.searchFields.length; i++) {
+                var value = item[cfg.searchFields[i]];
+                if (value != null && String(value).toLowerCase().indexOf(q) !== -1) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+    return items;
+}
+
+var sortState = {
+    timeline: { col: 1, dir: 1 }
+};
+
+function getSortedItems(name) {
+    var cfg = blockConfigs[name];
+    var items = getBlockItems(name);
+    var st = sortState[name];
+    if (st) {
+        var col = cfg.columns[st.col];
+        if (col && col.sortValue) {
+            items = items.slice().sort(function (a, b) {
+                var va = col.sortValue(a);
+                var vb = col.sortValue(b);
+                if (typeof va === 'number' && typeof vb === 'number') {
+                    return (va - vb) * st.dir;
+                }
+                return String(va).toLowerCase().localeCompare(String(vb).toLowerCase(), 'ru') * st.dir;
+            });
+        }
+    }
+    return items;
+}
+
+function buildHeaderCell(name, col, idx) {
+    var th = document.createElement('th');
+    var st = sortState[name];
+    var arrow = (st && st.col === idx) ? (st.dir === 1 ? ' ▲' : ' ▼') : '';
+    th.textContent = col.label + arrow;
+    if (col.sortValue) {
+        th.className = 'sortable';
+        th.title = 'Сортировать';
+        th.addEventListener('click', function () {
+            var cur = sortState[name];
+            if (cur && cur.col === idx) {
+                sortState[name] = { col: idx, dir: -cur.dir };
+            } else {
+                sortState[name] = { col: idx, dir: 1 };
+            }
+            renderBlock(name);
+        });
+    }
+    return th;
+}
+
+// ─── Универсальный движок таблиц ────────────────────────────
+// Все блоки-списки рендерятся одной функцией по конфигу blockConfigs:
+// колонки, поля формы, адрес API и валидация у каждого свои,
+// а таблица, модалка, сортировка, поиск и кнопки — общие.
+
+function renderBlock(name) {
+    var cfg = blockConfigs[name];
+    var wrap = document.querySelector('#' + name + '-table-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    wrap.appendChild(buildBlockTable(name));
+}
+
+function buildBlockTable(name) {
+    var cfg = blockConfigs[name];
+    var items = getSortedItems(name);
+
+    var table = document.createElement('table');
+    table.className = 'data-table' + (cfg.narrow ? ' data-table--narrow' : '');
+
+    var thead = document.createElement('thead');
+    var headRow = document.createElement('tr');
+    for (var c = 0; c < cfg.columns.length; c++) {
+        headRow.appendChild(buildHeaderCell(name, cfg.columns[c], c));
+    }
+    if (cfg.hasActive !== false) {
+        var thStatus = document.createElement('th');
+        thStatus.textContent = 'Статус';
+        headRow.appendChild(thStatus);
+    }
+    var thActions = document.createElement('th');
+    thActions.textContent = 'Действия';
+    headRow.appendChild(thActions);
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+
+    if (items.length === 0) {
+        var emptyRow = document.createElement('tr');
+        var emptyCell = document.createElement('td');
+        emptyCell.colSpan = cfg.columns.length + (cfg.hasActive !== false ? 2 : 1);
+        emptyCell.className = 'table-empty';
+        emptyCell.textContent = 'Нет записей';
+        emptyRow.appendChild(emptyCell);
+        tbody.appendChild(emptyRow);
+    }
+
+    for (var i = 0; i < items.length; i++) {
+        tbody.appendChild(buildBodyRow(name, cfg, items[i]));
+    }
+    table.appendChild(tbody);
+    return table;
+}
+
+function buildBodyRow(name, cfg, item) {
+    var tr = document.createElement('tr');
+    if (item.active === false) tr.classList.add('row-inactive');
+
+    for (var c = 0; c < cfg.columns.length; c++) {
+        var td = document.createElement('td');
+        td.appendChild(cfg.columns[c].render(item));
+        tr.appendChild(td);
+    }
+
+    if (cfg.hasActive !== false) {
+        var tdStatus = document.createElement('td');
+        tdStatus.appendChild(buildActiveBadge(item.active));
+        tr.appendChild(tdStatus);
+    }
+
+    var tdActions = document.createElement('td');
+    tdActions.appendChild(buildRowActions(name, item));
+    tr.appendChild(tdActions);
+
+    return tr;
+}
+
+// Открывает модалку редактирования (id задан) или добавления (id === null).
+function openBlockEditModal(name, id) {
+    var cfg = blockConfigs[name];
+    var isNew = (id === null || id === undefined);
+    var item = isNew ? cfg.defaults() : findById(cfg.getCache(), id);
+    if (!item) return;
+
+    var form = cfg.buildForm(item);
+
+    // Старые значения для отмены (до изменения).
+    var oldPayload = null;
+    if (!isNew) {
+        oldPayload = cfg.toPayload(item);
+        if (cfg.hasActive !== false) {
+            oldPayload.active = item.active !== false;
+        }
+    }
+
+    openModal(isNew ? cfg.addTitle : cfg.editTitle, form, function () {
+        var data = cfg.collect(form);
+        var error = cfg.validate(data);
+        if (error) {
+            showStatus(error, 'error');
+            return;
+        }
+        if (cfg.hasActive !== false) {
+            data.active = isNew ? true : (item.active !== false);
+        }
+
+        var request = isNew
+            ? apiRequest('POST', cfg.api, data)
+            : apiRequest('PUT', cfg.api + '/' + id, data);
+
+        request
+            .then(parseApiResponse)
+            .then(function (body) {
+                if (isNew) {
+                    var createdId = body.data.id;
+                    pushUndo(name, 'добавление записи', function () {
+                        return apiRequest('DELETE', cfg.api + '/' + createdId).then(parseApiResponse);
+                    });
+                } else {
+                    pushUndo(name, 'изменение записи', function () {
+                        return apiRequest('PUT', cfg.api + '/' + id, oldPayload).then(parseApiResponse);
+                    });
+                }
+                showStatus(isNew ? 'Добавлено' : 'Сохранено');
+                closeModal();
+                isDirty = false;
+                loadData();
+            })
+            .catch(function (err) {
+                showStatus('Ошибка сохранения: ' + err.message, 'error');
+            });
+    });
+}
+
+function toggleBlockItemActive(name, id) {
+    var cfg = blockConfigs[name];
+    var item = findById(cfg.getCache(), id);
+    if (!item) return;
+
+    var oldPayload = cfg.toPayload(item);
+    oldPayload.active = item.active !== false;
+
+    var payload = cfg.toPayload(item);
+    payload.active = (item.active === false); // переворачиваем состояние
+
+    apiRequest('PUT', cfg.api + '/' + id, payload)
+        .then(parseApiResponse)
+        .then(function () {
+            pushUndo(name, 'смену статуса', function () {
+                return apiRequest('PUT', cfg.api + '/' + id, oldPayload).then(parseApiResponse);
+            });
+            showStatus(payload.active ? 'Запись активирована' : 'Запись деактивирована');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка: ' + error.message, 'error');
+        });
+}
+
+function deleteBlockItem(name, id) {
+    var cfg = blockConfigs[name];
+    var item = findById(cfg.getCache(), id);
+    if (!item) return;
+
+    if (!confirm(cfg.deleteConfirm + ' Вернуть можно будет кнопкой «Отменить».')) {
+        return;
+    }
+
+    var snapshot = cfg.toPayload(item);
+    if (cfg.hasActive !== false) {
+        snapshot.active = item.active !== false;
+    }
+
+    apiRequest('DELETE', cfg.api + '/' + id)
+        .then(parseApiResponse)
+        .then(function () {
+            pushUndo(name, 'удаление записи', function () {
+                return apiRequest('POST', cfg.api, snapshot).then(parseApiResponse);
+            });
+            showStatus('Удалено');
+            loadData();
+        })
+        .catch(function (error) {
+            showStatus('Ошибка удаления: ' + error.message, 'error');
+        });
+}
+
+// ─── Должности: выпадающий список и inline-добавление ───────
 
 function buildPositionOptions() {
     var opts = [];
@@ -394,7 +785,7 @@ function buildPositionOptions() {
     return opts;
 }
 
-function buildInlinePositionAdd(card) {
+function buildInlinePositionAdd(form) {
     var wrap = document.createElement('div');
     wrap.className = 'inline-add';
     wrap.style.display = 'none';
@@ -406,6 +797,7 @@ function buildInlinePositionAdd(card) {
     wrap.appendChild(input);
 
     var saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
     saveBtn.className = 'btn primary small';
     saveBtn.textContent = 'Добавить';
     saveBtn.addEventListener('click', function () {
@@ -418,7 +810,10 @@ function buildInlinePositionAdd(card) {
             .then(parseApiResponse)
             .then(function (body) {
                 cachedPositions.push(body.data);
-                var select = card.querySelector('.team__item-description');
+                pushUndo('positions', 'добавление должности', function () {
+                    return apiRequest('DELETE', '/api/positions/' + body.data.id).then(parseApiResponse);
+                });
+                var select = form.querySelector('.team__item-description');
                 if (select) {
                     var opt = document.createElement('option');
                     opt.value = body.data.title;
@@ -439,1214 +834,7 @@ function buildInlinePositionAdd(card) {
     return wrap;
 }
 
-function buildTeamCard(member, index) {
-    var card = document.createElement('div');
-    card.className = 'card card--rounded team__item team__item-card';
-    card.dataset.id = member.id;
-    if (member.active === false) card.classList.add('inactive');
-
-    var header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
-
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Сотрудник #' + index;
-    title.style.margin = '0';
-    header.appendChild(title);
-
-    header.appendChild(buildActiveBadge(member.active));
-    card.appendChild(header);
-
-    card.appendChild(buildField('Имя', 'team__item-title', member.name));
-    card.appendChild(buildSelectField('Должность', 'team__item-description', member.position, buildPositionOptions()));
-
-    var addPosBtn = document.createElement('button');
-    addPosBtn.className = 'btn small';
-    addPosBtn.textContent = '+ Новая должность';
-    addPosBtn.style.marginTop = '4px';
-    var inlineAdd = buildInlinePositionAdd(card);
-    addPosBtn.addEventListener('click', function () {
-        inlineAdd.style.display = inlineAdd.style.display === 'none' ? 'flex' : 'none';
-    });
-    card.appendChild(addPosBtn);
-    card.appendChild(inlineAdd);
-
-    card.appendChild(buildField('Фото (путь)', 'team__item-image card__image', member.photo));
-
-    var socials = document.createElement('div');
-    socials.className = 'team__item-socials';
-    socials.appendChild(buildField('VK', '', member.vk, 'vk'));
-    card.appendChild(socials);
-
-    var actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    var saveBtn = document.createElement('button');
-    saveBtn.className = 'btn primary small';
-    saveBtn.textContent = 'Сохранить';
-    saveBtn.addEventListener('click', function () { saveTeamMember(member.id, card); });
-    actions.appendChild(saveBtn);
-
-    actions.appendChild(buildToggleButton(member.active, function () {
-        toggleTeamMemberActive(member.id, card, member.active !== false);
-    }));
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn danger small';
-    delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deleteTeamMember(member.id); });
-    actions.appendChild(delBtn);
-
-    card.appendChild(actions);
-    return card;
-}
-
-function buildTeamRow(member) {
-    var tr = document.createElement('tr');
-    if (member.active === false) tr.style.opacity = '0.6';
-
-    var tdPhoto = document.createElement('td');
-    var img = document.createElement('img');
-    img.className = 'table-photo';
-    img.src = resolveSitePath(member.photo || 'upload/placeholder-avatar.svg');
-    img.alt = member.name;
-    tdPhoto.appendChild(img);
-    tr.appendChild(tdPhoto);
-
-    var tdName = document.createElement('td');
-    tdName.textContent = member.name;
-    tdName.className = 'table-cell-name';
-    tr.appendChild(tdName);
-
-    var tdPos = document.createElement('td');
-    tdPos.textContent = member.position;
-    tdPos.className = 'table-cell-position';
-    tr.appendChild(tdPos);
-
-    var tdStatus = document.createElement('td');
-    tdStatus.appendChild(buildActiveBadge(member.active));
-    tr.appendChild(tdStatus);
-
-    var tdActions = document.createElement('td');
-    var actionsDiv = document.createElement('div');
-    actionsDiv.className = 'table-actions';
-
-    var editBtn = document.createElement('button');
-    editBtn.className = 'btn small';
-    editBtn.textContent = 'Редактировать';
-    editBtn.addEventListener('click', function () {
-        switchSection('team');
-        setTeamViewMode('cards');
-        renderTeam(cachedTeam);
-    });
-    actionsDiv.appendChild(editBtn);
-
-    actionsDiv.appendChild(buildToggleButton(member.active, function () {
-        toggleTeamMemberActive(member.id, null, member.active !== false);
-    }));
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn danger small';
-    delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deleteTeamMember(member.id); });
-    actionsDiv.appendChild(delBtn);
-
-    tdActions.appendChild(actionsDiv);
-    tr.appendChild(tdActions);
-
-    return tr;
-}
-
-function collectTeamData(card) {
-    return {
-        name: card.querySelector('.team__item-title').value,
-        position: card.querySelector('.team__item-description').value,
-        photo: card.querySelector('.team__item-image').value,
-        vk: card.querySelector('[data-social="vk"]').value
-    };
-}
-
-function saveTeamMember(id, card) {
-    var data = collectTeamData(card);
-    var member = findById(cachedTeam, id);
-    data.active = member ? member.active !== false : true;
-
-    if (data.name.trim() === '' || data.position.trim() === '' || data.photo.trim() === '') {
-        showStatus('Заполните имя, должность и фото сотрудника', 'error');
-        return;
-    }
-
-    apiRequest('PUT', '/api/team/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Сотрудник сохранён');
-            isDirty = false;
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
-
-function toggleTeamMemberActive(id, card, currentlyActive) {
-    var member = findById(cachedTeam, id);
-    if (!member) return;
-
-    var data = {
-        name: member.name,
-        position: member.position,
-        photo: member.photo,
-        vk: member.vk,
-        active: !currentlyActive
-    };
-
-    apiRequest('PUT', '/api/team/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus(currentlyActive ? 'Сотрудник деактивирован' : 'Сотрудник активирован');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка: ' + error.message, 'error');
-        });
-}
-
-function addTeamMember() {
-    apiRequest('POST', '/api/team', {
-        name: 'Новый сотрудник',
-        position: cachedPositions.length > 0 ? cachedPositions[0].title : 'Должность',
-        photo: 'upload/placeholder-avatar.svg',
-        vk: '#',
-        active: true
-    })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Сотрудник добавлен');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deleteTeamMember(id) {
-    if (!confirm('Удалить сотрудника?')) {
-        return;
-    }
-
-    apiRequest('DELETE', '/api/team/' + id)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Сотрудник удалён');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
-        });
-}
-
-// ─── Вакансии ───────────────────────────────────────────────
-
-function filterVacancies(vacancies, query) {
-    if (!query) return vacancies;
-    var q = query.toLowerCase();
-    return vacancies.filter(function (v) {
-        return v.title && v.title.toLowerCase().indexOf(q) !== -1;
-    });
-}
-
-function renderVacancies(vacancies) {
-    var query = document.querySelector('#vacancies-search').value;
-    var filtered = filterVacancies(vacancies, query);
-    var list = document.querySelector('#vacancies-list');
-    list.innerHTML = '';
-    for (var i = 0; i < filtered.length; i++) {
-        list.appendChild(buildVacancyCard(filtered[i], i + 1));
-    }
-}
-
-function buildVacancyCard(vacancy, index) {
-    var card = document.createElement('div');
-    card.className = 'card card--half-rounded vacancies__item';
-    card.dataset.id = vacancy.id;
-    if (vacancy.active === false) card.classList.add('inactive');
-
-    var header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
-
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Вакансия #' + index;
-    title.style.margin = '0';
-    header.appendChild(title);
-
-    header.appendChild(buildActiveBadge(vacancy.active));
-    card.appendChild(header);
-
-    card.appendChild(buildField('Название', 'vacancies__item-title card__title heading heading--type-card', vacancy.title));
-    card.appendChild(buildField('Формат / город', 'vacancies__item-address card__address', vacancy.format));
-    card.appendChild(buildField('Ссылка на hh.ru', 'vacancies__item-lik card__footer-link', vacancy.url));
-
-    var actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    var saveBtn = document.createElement('button');
-    saveBtn.className = 'btn primary small';
-    saveBtn.textContent = 'Сохранить';
-    saveBtn.addEventListener('click', function () { saveVacancy(vacancy.id, card); });
-    actions.appendChild(saveBtn);
-
-    actions.appendChild(buildToggleButton(vacancy.active, function () {
-        toggleVacancyActive(vacancy.id, vacancy.active !== false);
-    }));
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn danger small';
-    delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deleteVacancy(vacancy.id); });
-    actions.appendChild(delBtn);
-
-    card.appendChild(actions);
-    return card;
-}
-
-function collectVacancyData(card) {
-    return {
-        title: card.querySelector('.vacancies__item-title').value,
-        format: card.querySelector('.vacancies__item-address').value,
-        url: card.querySelector('.vacancies__item-lik').value
-    };
-}
-
-function saveVacancy(id, card) {
-    var data = collectVacancyData(card);
-    var vacancy = findById(cachedVacancies, id);
-    data.active = vacancy ? vacancy.active !== false : true;
-
-    if (data.title.trim() === '' || data.format.trim() === '' || data.url.trim() === '') {
-        showStatus('Заполните все поля вакансии', 'error');
-        return;
-    }
-
-    apiRequest('PUT', '/api/vacancies/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Вакансия сохранена');
-            isDirty = false;
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
-
-function toggleVacancyActive(id, currentlyActive) {
-    var vacancy = findById(cachedVacancies, id);
-    if (!vacancy) return;
-
-    var data = {
-        title: vacancy.title,
-        format: vacancy.format,
-        url: vacancy.url,
-        active: !currentlyActive
-    };
-
-    apiRequest('PUT', '/api/vacancies/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus(currentlyActive ? 'Вакансия деактивирована' : 'Вакансия активирована');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка: ' + error.message, 'error');
-        });
-}
-
-function addVacancy() {
-    apiRequest('POST', '/api/vacancies', {
-        title: 'Новая вакансия',
-        format: 'удаленно',
-        url: 'https://hh.ru',
-        active: true
-    })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Вакансия добавлена');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deleteVacancy(id) {
-    if (!confirm('Удалить вакансию?')) {
-        return;
-    }
-
-    apiRequest('DELETE', '/api/vacancies/' + id)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Вакансия удалена');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
-        });
-}
-
-// ─── Плюшки ─────────────────────────────────────────────────
-
-function renderBenefits(benefits) {
-    var list = document.querySelector('#benefits-list');
-    list.innerHTML = '';
-    for (var i = 0; i < benefits.length; i++) {
-        list.appendChild(buildBenefitCard(benefits[i], i + 1));
-    }
-}
-
-function buildBenefitCard(benefit, index) {
-    var card = document.createElement('div');
-    card.className = 'card card--default bonus__item bonus__item--' + index;
-    card.dataset.id = benefit.id;
-    if (benefit.active === false) card.classList.add('inactive');
-
-    var header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
-
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Бонус #' + index;
-    title.style.margin = '0';
-    header.appendChild(title);
-
-    header.appendChild(buildActiveBadge(benefit.active));
-    card.appendChild(header);
-
-    card.appendChild(buildField('Название', 'bonus__item-title card__text', benefit.title));
-
-    var descLabel = document.createElement('label');
-    descLabel.className = 'field-label';
-    descLabel.textContent = 'Описание';
-    card.appendChild(descLabel);
-
-    var desc = document.createElement('textarea');
-    desc.className = 'field-input bonus__item-text';
-    desc.rows = 3;
-    desc.value = benefit.description;
-    card.appendChild(desc);
-
-    var actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    var saveBtn = document.createElement('button');
-    saveBtn.className = 'btn primary small';
-    saveBtn.textContent = 'Сохранить';
-    saveBtn.addEventListener('click', function () { saveBenefit(benefit.id, card); });
-    actions.appendChild(saveBtn);
-
-    actions.appendChild(buildToggleButton(benefit.active, function () {
-        toggleBenefitActive(benefit.id, benefit.active !== false);
-    }));
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn danger small';
-    delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deleteBenefit(benefit.id); });
-    actions.appendChild(delBtn);
-
-    card.appendChild(actions);
-    return card;
-}
-
-function collectBenefitData(card) {
-    return {
-        title: card.querySelector('.bonus__item-title').value,
-        description: card.querySelector('.bonus__item-text').value
-    };
-}
-
-function saveBenefit(id, card) {
-    var data = collectBenefitData(card);
-
-    if (data.title.trim() === '' || data.description.trim() === '') {
-        showStatus('Заполните название и описание бонуса', 'error');
-        return;
-    }
-
-    fetch('/api/data')
-        .then(function (r) { return r.json(); })
-        .then(function (allData) {
-            var b = findById(allData.benefits, id);
-            data.active = b ? b.active !== false : true;
-
-            return apiRequest('PUT', '/api/benefits/' + id, data)
-                .then(parseApiResponse)
-                .then(function () {
-                    showStatus('Бонус сохранён');
-                    isDirty = false;
-                    loadData();
-                });
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
-
-function toggleBenefitActive(id, currentlyActive) {
-    fetch('/api/data')
-        .then(function (r) { return r.json(); })
-        .then(function (allData) {
-            var benefit = findById(allData.benefits, id);
-            if (!benefit) return;
-
-            var data = {
-                title: benefit.title,
-                description: benefit.description,
-                active: !currentlyActive
-            };
-
-            return apiRequest('PUT', '/api/benefits/' + id, data)
-                .then(parseApiResponse)
-                .then(function () {
-                    showStatus(currentlyActive ? 'Бонус деактивирован' : 'Бонус активирован');
-                    loadData();
-                });
-        })
-        .catch(function (error) {
-            showStatus('Ошибка: ' + error.message, 'error');
-        });
-}
-
-function addBenefit() {
-    apiRequest('POST', '/api/benefits', {
-        title: 'Новый бонус',
-        description: 'Описание бонуса',
-        active: true
-    })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Бонус добавлен');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deleteBenefit(id) {
-    if (!confirm('Удалить бонус?')) {
-        return;
-    }
-
-    apiRequest('DELETE', '/api/benefits/' + id)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Бонус удалён');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
-        });
-}
-
-// ─── Должности ──────────────────────────────────────────────
-
-function renderPositions(positions) {
-    var list = document.querySelector('#positions-list');
-    list.innerHTML = '';
-    for (var i = 0; i < positions.length; i++) {
-        list.appendChild(buildPositionCard(positions[i], i + 1));
-    }
-}
-
-function buildPositionCard(position, index) {
-    var card = document.createElement('div');
-    card.className = 'card';
-    card.dataset.id = position.id;
-
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Должность #' + index;
-    card.appendChild(title);
-
-    card.appendChild(buildField('Название', 'position-title', position.title));
-
-    card.appendChild(buildCardActions(
-        function () { savePosition(position.id, card); },
-        function () { deletePosition(position.id); }
-    ));
-    return card;
-}
-
-function savePosition(id, card) {
-    var title = card.querySelector('.position-title').value;
-
-    if (title.trim() === '') {
-        showStatus('Введите название должности', 'error');
-        return;
-    }
-
-    apiRequest('PUT', '/api/positions/' + id, { title: title })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Должность сохранена');
-            isDirty = false;
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
-
-function addPosition() {
-    apiRequest('POST', '/api/positions', { title: 'Новая должность' })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Должность добавлена');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deletePosition(id) {
-    if (!confirm('Удалить должность?')) {
-        return;
-    }
-
-    apiRequest('DELETE', '/api/positions/' + id)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Должность удалена');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
-        });
-}
-
-// ─── Таймлайн платформы ─────────────────────────────────────
-// Блок 3 из ТЗ практики ("Развиваем платформу"). Контракт реально
-// зафиксирован сервером Никиты (dataService.js: validateTimelineItem,
-// /api/timeline, ключ data.timeline): year (целое число, 1990-2100),
-// name, category (строго один из B2B/B2C/B2E — это и есть "тип метки"
-// из ТЗ), subtitle, description, active. Иконок/картинок в контракте нет.
-
-var TIMELINE_CATEGORIES = ['B2B', 'B2C', 'B2E'];
-
-function renderTimeline(timeline) {
-    var list = document.querySelector('#timeline-list');
-    list.innerHTML = '';
-    for (var i = 0; i < timeline.length; i++) {
-        list.appendChild(buildTimelineCard(timeline[i], i + 1));
-    }
-}
-
-function buildTimelineCard(item, index) {
-    var card = document.createElement('div');
-    card.className = 'card';
-    card.dataset.id = item.id;
-    if (item.active === false) card.classList.add('inactive');
-
-    var header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
-
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Продукт #' + index;
-    title.style.margin = '0';
-    header.appendChild(title);
-
-    header.appendChild(buildActiveBadge(item.active));
-    card.appendChild(header);
-
-    card.appendChild(buildField('Год', 'timeline__item-year', item.year));
-    card.appendChild(buildField('Название продукта', 'timeline__item-name', item.name));
-    card.appendChild(buildSelectField('Тип метки (аудитория)', 'timeline__item-category', item.category, TIMELINE_CATEGORIES));
-    card.appendChild(buildField('Подзаголовок', 'timeline__item-subtitle', item.subtitle));
-
-    var descLabel = document.createElement('label');
-    descLabel.className = 'field-label';
-    descLabel.textContent = 'Описание';
-    card.appendChild(descLabel);
-
-    var desc = document.createElement('textarea');
-    desc.className = 'field-input timeline__item-description';
-    desc.rows = 3;
-    desc.value = item.description;
-    card.appendChild(desc);
-
-    var actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    var saveBtn = document.createElement('button');
-    saveBtn.className = 'btn primary small';
-    saveBtn.textContent = 'Сохранить';
-    saveBtn.addEventListener('click', function () { saveTimelineItem(item.id, card); });
-    actions.appendChild(saveBtn);
-
-    actions.appendChild(buildToggleButton(item.active, function () {
-        toggleTimelineItemActive(item.id, item.active !== false);
-    }));
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn danger small';
-    delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deleteTimelineItem(item.id); });
-    actions.appendChild(delBtn);
-
-    card.appendChild(actions);
-    return card;
-}
-
-function collectTimelineData(card) {
-    return {
-        year: Number(card.querySelector('.timeline__item-year').value),
-        name: card.querySelector('.timeline__item-name').value,
-        category: card.querySelector('.timeline__item-category').value,
-        subtitle: card.querySelector('.timeline__item-subtitle').value,
-        description: card.querySelector('.timeline__item-description').value
-    };
-}
-
-function saveTimelineItem(id, card) {
-    var data = collectTimelineData(card);
-    var item = findById(cachedTimeline, id);
-    data.active = item ? item.active !== false : true;
-
-    if (!Number.isInteger(data.year) || data.year < 1990 || data.year > 2100) {
-        showStatus('Год должен быть целым числом от 1990 до 2100', 'error');
-        return;
-    }
-    if (data.name.trim() === '' || data.subtitle.trim() === '' || data.description.trim() === '') {
-        showStatus('Заполните название, подзаголовок и описание', 'error');
-        return;
-    }
-
-    apiRequest('PUT', '/api/timeline/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Карточка таймлайна сохранена');
-            isDirty = false;
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
-
-function toggleTimelineItemActive(id, currentlyActive) {
-    var item = findById(cachedTimeline, id);
-    if (!item) return;
-
-    var data = {
-        year: item.year,
-        name: item.name,
-        category: item.category,
-        subtitle: item.subtitle,
-        description: item.description,
-        active: !currentlyActive
-    };
-
-    apiRequest('PUT', '/api/timeline/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus(currentlyActive ? 'Карточка деактивирована' : 'Карточка активирована');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка: ' + error.message, 'error');
-        });
-}
-
-function addTimelineItem() {
-    apiRequest('POST', '/api/timeline', {
-        year: new Date().getFullYear(),
-        name: 'Новый продукт',
-        category: 'B2B',
-        subtitle: 'Подзаголовок',
-        description: 'Описание продукта',
-        active: true
-    })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Карточка таймлайна добавлена');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deleteTimelineItem(id) {
-    if (!confirm('Удалить карточку таймлайна?')) {
-        return;
-    }
-
-    apiRequest('DELETE', '/api/timeline/' + id)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Карточка таймлайна удалена');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
-        });
-}
-
-// ─── Фотогалерея ────────────────────────────────────────────
-// Блок 7 из ТЗ практики ("жизнь компании"). Контракт зафиксирован
-// сервером Никиты (dataService.js: validateGalleryItem): src, type
-// (строго "image" или "video"), caption, active.
-
-var GALLERY_TYPES = ['image', 'video'];
-
-function renderGallery(gallery) {
-    var list = document.querySelector('#gallery-list');
-    list.innerHTML = '';
-    for (var i = 0; i < gallery.length; i++) {
-        list.appendChild(buildGalleryCard(gallery[i], i + 1));
-    }
-}
-
-function buildGalleryCard(item, index) {
-    var card = document.createElement('div');
-    card.className = 'card gallery__item';
-    card.dataset.id = item.id;
-    if (item.active === false) card.classList.add('inactive');
-
-    var header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
-
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Фото #' + index;
-    title.style.margin = '0';
-    header.appendChild(title);
-
-    header.appendChild(buildActiveBadge(item.active));
-    card.appendChild(header);
-
-    card.appendChild(buildField('Путь к файлу', 'gallery__item-src', item.src));
-    card.appendChild(buildSelectField('Тип файла', 'gallery__item-type', item.type, GALLERY_TYPES));
-    card.appendChild(buildField('Подпись к фото', 'gallery__item-caption', item.caption));
-
-    var actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    var saveBtn = document.createElement('button');
-    saveBtn.className = 'btn primary small';
-    saveBtn.textContent = 'Сохранить';
-    saveBtn.addEventListener('click', function () { saveGalleryItem(item.id, card); });
-    actions.appendChild(saveBtn);
-
-    actions.appendChild(buildToggleButton(item.active, function () {
-        toggleGalleryItemActive(item.id, item.active !== false);
-    }));
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn danger small';
-    delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deleteGalleryItem(item.id); });
-    actions.appendChild(delBtn);
-
-    card.appendChild(actions);
-    return card;
-}
-
-function collectGalleryData(card) {
-    return {
-        src: card.querySelector('.gallery__item-src').value,
-        type: card.querySelector('.gallery__item-type').value,
-        caption: card.querySelector('.gallery__item-caption').value
-    };
-}
-
-function saveGalleryItem(id, card) {
-    var data = collectGalleryData(card);
-    var item = findById(cachedGallery, id);
-    data.active = item ? item.active !== false : true;
-
-    if (data.src.trim() === '' || data.caption.trim() === '') {
-        showStatus('Заполните путь к файлу и подпись', 'error');
-        return;
-    }
-
-    apiRequest('PUT', '/api/gallery/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Фото сохранено');
-            isDirty = false;
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
-
-function toggleGalleryItemActive(id, currentlyActive) {
-    var item = findById(cachedGallery, id);
-    if (!item) return;
-
-    var data = {
-        src: item.src,
-        type: item.type,
-        caption: item.caption,
-        active: !currentlyActive
-    };
-
-    apiRequest('PUT', '/api/gallery/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus(currentlyActive ? 'Фото деактивировано' : 'Фото активировано');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка: ' + error.message, 'error');
-        });
-}
-
-function addGalleryItem() {
-    apiRequest('POST', '/api/gallery', {
-        src: '',
-        type: 'image',
-        caption: 'Новая подпись',
-        active: true
-    })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Фото добавлено');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deleteGalleryItem(id) {
-    if (!confirm('Удалить фото?')) {
-        return;
-    }
-
-    apiRequest('DELETE', '/api/gallery/' + id)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Фото удалено');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
-        });
-}
-
-// Массовое удаление — по одному DELETE на каждое фото, последовательно
-// (чтобы не заваливать сервер параллельными записями в один и тот же файл).
-function deleteAllGalleryItems() {
-    if (cachedGallery.length === 0) {
-        showStatus('Галерея уже пуста');
-        return;
-    }
-    if (!confirm('Удалить все фото галереи (' + cachedGallery.length + ' шт.)? Это действие нельзя отменить.')) {
-        return;
-    }
-
-    var ids = cachedGallery.map(function (item) { return item.id; });
-
-    var chain = Promise.resolve();
-    ids.forEach(function (id) {
-        chain = chain.then(function () {
-            return apiRequest('DELETE', '/api/gallery/' + id).then(parseApiResponse);
-        });
-    });
-
-    chain
-        .then(function () {
-            showStatus('Вся галерея удалена');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка при массовом удалении: ' + error.message, 'error');
-            loadData();
-        });
-}
-
-// ─── Логотипы партнёров и клиентов (блок 4) ─────────────────
-// Контракт сервера (dataService.js: validateBrand): src, name, active.
-
-function renderBrands(brands) {
-    var list = document.querySelector('#brands-list');
-    list.innerHTML = '';
-    for (var i = 0; i < brands.length; i++) {
-        list.appendChild(buildBrandCard(brands[i], i + 1));
-    }
-}
-
-function buildBrandCard(item, index) {
-    var card = document.createElement('div');
-    card.className = 'card brands__item';
-    card.dataset.id = item.id;
-    if (item.active === false) card.classList.add('inactive');
-
-    var header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
-
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Логотип #' + index;
-    title.style.margin = '0';
-    header.appendChild(title);
-
-    header.appendChild(buildActiveBadge(item.active));
-    card.appendChild(header);
-
-    card.appendChild(buildField('Путь к логотипу', 'brands__item-src', item.src));
-    card.appendChild(buildField('Название компании', 'brands__item-name', item.name));
-
-    var actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    var saveBtn = document.createElement('button');
-    saveBtn.className = 'btn primary small';
-    saveBtn.textContent = 'Сохранить';
-    saveBtn.addEventListener('click', function () { saveBrand(item.id, card); });
-    actions.appendChild(saveBtn);
-
-    actions.appendChild(buildToggleButton(item.active, function () {
-        toggleBrandActive(item.id, item.active !== false);
-    }));
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn danger small';
-    delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deleteBrand(item.id); });
-    actions.appendChild(delBtn);
-
-    card.appendChild(actions);
-    return card;
-}
-
-function collectBrandData(card) {
-    return {
-        src: card.querySelector('.brands__item-src').value,
-        name: card.querySelector('.brands__item-name').value
-    };
-}
-
-function saveBrand(id, card) {
-    var data = collectBrandData(card);
-    var item = findById(cachedBrands, id);
-    data.active = item ? item.active !== false : true;
-
-    if (data.src.trim() === '' || data.name.trim() === '') {
-        showStatus('Заполните путь к логотипу и название', 'error');
-        return;
-    }
-
-    apiRequest('PUT', '/api/brands/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Логотип сохранён');
-            isDirty = false;
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
-
-function toggleBrandActive(id, currentlyActive) {
-    var item = findById(cachedBrands, id);
-    if (!item) return;
-
-    apiRequest('PUT', '/api/brands/' + id, { src: item.src, name: item.name, active: !currentlyActive })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus(currentlyActive ? 'Логотип деактивирован' : 'Логотип активирован');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка: ' + error.message, 'error');
-        });
-}
-
-function addBrand() {
-    apiRequest('POST', '/api/brands', { src: '', name: 'Новый партнёр', active: true })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Логотип добавлен');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deleteBrand(id) {
-    if (!confirm('Удалить логотип?')) {
-        return;
-    }
-
-    apiRequest('DELETE', '/api/brands/' + id)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Логотип удалён');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
-        });
-}
-
-// ─── Офисы «Работай как удобно» (блок 8) ────────────────────
-// Контракт сервера (dataService.js: validateWorkItem): image, caption, active.
-
-function renderWork(work) {
-    var list = document.querySelector('#work-list');
-    list.innerHTML = '';
-    for (var i = 0; i < work.length; i++) {
-        list.appendChild(buildWorkCard(work[i], i + 1));
-    }
-}
-
-function buildWorkCard(item, index) {
-    var card = document.createElement('div');
-    card.className = 'card work__item';
-    card.dataset.id = item.id;
-    if (item.active === false) card.classList.add('inactive');
-
-    var header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
-
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Фото #' + index;
-    title.style.margin = '0';
-    header.appendChild(title);
-
-    header.appendChild(buildActiveBadge(item.active));
-    card.appendChild(header);
-
-    card.appendChild(buildField('Путь к фото', 'work__item-image', item.image));
-
-    var descLabel = document.createElement('label');
-    descLabel.className = 'field-label';
-    descLabel.textContent = 'Подпись';
-    card.appendChild(descLabel);
-
-    var desc = document.createElement('textarea');
-    desc.className = 'field-input work__item-caption';
-    desc.rows = 2;
-    desc.value = item.caption;
-    card.appendChild(desc);
-
-    var actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    var saveBtn = document.createElement('button');
-    saveBtn.className = 'btn primary small';
-    saveBtn.textContent = 'Сохранить';
-    saveBtn.addEventListener('click', function () { saveWorkItem(item.id, card); });
-    actions.appendChild(saveBtn);
-
-    actions.appendChild(buildToggleButton(item.active, function () {
-        toggleWorkItemActive(item.id, item.active !== false);
-    }));
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn danger small';
-    delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deleteWorkItem(item.id); });
-    actions.appendChild(delBtn);
-
-    card.appendChild(actions);
-    return card;
-}
-
-function collectWorkData(card) {
-    return {
-        image: card.querySelector('.work__item-image').value,
-        caption: card.querySelector('.work__item-caption').value
-    };
-}
-
-function saveWorkItem(id, card) {
-    var data = collectWorkData(card);
-    var item = findById(cachedWork, id);
-    data.active = item ? item.active !== false : true;
-
-    if (data.image.trim() === '' || data.caption.trim() === '') {
-        showStatus('Заполните путь к фото и подпись', 'error');
-        return;
-    }
-
-    apiRequest('PUT', '/api/work/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Фото офиса сохранено');
-            isDirty = false;
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
-
-function toggleWorkItemActive(id, currentlyActive) {
-    var item = findById(cachedWork, id);
-    if (!item) return;
-
-    apiRequest('PUT', '/api/work/' + id, { image: item.image, caption: item.caption, active: !currentlyActive })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus(currentlyActive ? 'Фото деактивировано' : 'Фото активировано');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка: ' + error.message, 'error');
-        });
-}
-
-function addWorkItem() {
-    apiRequest('POST', '/api/work', { image: '', caption: 'Новая подпись', active: true })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Фото офиса добавлено');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deleteWorkItem(id) {
-    if (!confirm('Удалить фото офиса?')) {
-        return;
-    }
-
-    apiRequest('DELETE', '/api/work/' + id)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Фото офиса удалено');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
-        });
-}
-
-// ─── Направления (блок 5) ────────────────────────────────────
-// Контракт сервера (dataService.js: validateDirection): title,
-// description, technologies: [{name, icon}], active.
-
-function renderDirections(directions) {
-    var list = document.querySelector('#directions-list');
-    list.innerHTML = '';
-    for (var i = 0; i < directions.length; i++) {
-        list.appendChild(buildDirectionCard(directions[i], i + 1));
-    }
-}
+// ─── Направления: строка «технология» (название + иконка) ───
 
 function buildTechnologyRow(tech) {
     var row = document.createElement('div');
@@ -1667,6 +855,7 @@ function buildTechnologyRow(tech) {
     row.appendChild(icon);
 
     var del = document.createElement('button');
+    del.type = 'button';
     del.className = 'btn danger small';
     del.textContent = 'Удалить';
     del.addEventListener('click', function () {
@@ -1677,187 +866,502 @@ function buildTechnologyRow(tech) {
     return row;
 }
 
-function buildDirectionCard(item, index) {
-    var card = document.createElement('div');
-    card.className = 'card directions__item';
-    card.style.maxWidth = 'none';
-    card.style.flexBasis = '100%';
-    card.dataset.id = item.id;
-    if (item.active === false) card.classList.add('inactive');
+// ─── Метки таймлайна ────────────────────────────────────────
+// SVG-файлы лежат в upload/marks (о них писал Егор — публичная
+// страница показывает метку у каждой карточки таймлайна).
+// ВНИМАНИЕ: серверный контракт Никиты пока НЕ сохраняет поле mark
+// при добавлении/изменении — метки отображаются из data.json, а чтобы
+// они редактировались из админки, Никите нужно добавить mark в
+// validateTimelineItem/addTimelineItem/updateTimelineItem.
 
-    var header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
+var TIMELINE_MARKS = [
+    'upload/marks/billing.svg', 'upload/marks/binoculars.svg', 'upload/marks/booking.svg',
+    'upload/marks/channel-manager.svg', 'upload/marks/crm-integration.svg', 'upload/marks/express.svg',
+    'upload/marks/flower.svg', 'upload/marks/gms.svg', 'upload/marks/mobile-extranet.svg',
+    'upload/marks/order-management.svg', 'upload/marks/partner-api.svg', 'upload/marks/price-optimizer.svg',
+    'upload/marks/reactor.svg', 'upload/marks/reputation.svg', 'upload/marks/rocket.svg', 'upload/marks/star.svg'
+];
 
-    var title = document.createElement('h3');
-    title.className = 'card-title';
-    title.textContent = 'Направление #' + index;
-    title.style.margin = '0';
-    header.appendChild(title);
+// ─── Конфиги блоков ─────────────────────────────────────────
+// Каждый блок-список описывается конфигом; движок выше делает всё
+// остальное. Поля конфига:
+//   api          — базовый адрес REST-ресурса
+//   getCache     — актуальный массив из кэша
+//   searchFields — по каким полям ищет строка поиска
+//   columns      — колонки таблицы: label, render(item), sortValue(item)
+//   buildForm    — собирает форму для модалки
+//   collect      — читает данные из формы
+//   validate     — возвращает текст ошибки или null
+//   defaults     — заготовка новой записи
+//   toPayload    — тело PUT/POST из кэшированной записи (для undo и active)
+//   hasActive    — false, если у сущности нет поля active (должности)
+//   narrow       — true, если таблицу не нужно растягивать на всю ширину
 
-    header.appendChild(buildActiveBadge(item.active));
-    card.appendChild(header);
+var blockConfigs = {
 
-    card.appendChild(buildField('Название направления', 'directions__item-title', item.title));
+    team: {
+        api: '/api/team',
+        addTitle: 'Новый сотрудник',
+        editTitle: 'Редактирование сотрудника',
+        deleteConfirm: 'Удалить сотрудника?',
+        searchFields: ['name', 'position'],
+        getCache: function () { return cachedTeam; },
+        columns: [
+            { label: 'Фото', render: function (m) { return imgCell(m.photo, m.name); } },
+            { label: 'Имя', sortValue: function (m) { return m.name || ''; }, render: function (m) { return textCell(m.name); } },
+            { label: 'Должность', sortValue: function (m) { return m.position || ''; }, render: function (m) { return textCell(m.position); } }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Имя', 'team__item-title', item.name));
+            form.appendChild(buildSelectField('Должность', 'team__item-description', item.position, buildPositionOptions()));
 
-    var descLabel = document.createElement('label');
-    descLabel.className = 'field-label';
-    descLabel.textContent = 'Описание';
-    card.appendChild(descLabel);
+            var addPosBtn = document.createElement('button');
+            addPosBtn.type = 'button';
+            addPosBtn.className = 'btn small';
+            addPosBtn.textContent = '+ Новая должность';
+            addPosBtn.style.marginTop = '6px';
+            var inlineAdd = buildInlinePositionAdd(form);
+            addPosBtn.addEventListener('click', function () {
+                inlineAdd.style.display = inlineAdd.style.display === 'none' ? 'flex' : 'none';
+            });
+            form.appendChild(addPosBtn);
+            form.appendChild(inlineAdd);
 
-    var desc = document.createElement('textarea');
-    desc.className = 'field-input directions__item-description';
-    desc.rows = 3;
-    desc.value = item.description;
-    card.appendChild(desc);
-
-    var techLabel = document.createElement('h4');
-    techLabel.className = 'subsection-title';
-    techLabel.textContent = 'Технологии';
-    card.appendChild(techLabel);
-
-    var techList = document.createElement('div');
-    techList.className = 'stats-list directions__item-technologies';
-    for (var i = 0; i < item.technologies.length; i++) {
-        techList.appendChild(buildTechnologyRow(item.technologies[i]));
-    }
-    card.appendChild(techList);
-
-    var addTechBtn = document.createElement('button');
-    addTechBtn.className = 'btn small';
-    addTechBtn.textContent = '+ Добавить технологию';
-    addTechBtn.style.marginBottom = '10px';
-    addTechBtn.addEventListener('click', function () {
-        var row = buildTechnologyRow({ name: '', icon: '' });
-        techList.appendChild(row);
-        row.querySelector('.tech-name').focus();
-    });
-    card.appendChild(addTechBtn);
-
-    var actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    var saveBtn = document.createElement('button');
-    saveBtn.className = 'btn primary small';
-    saveBtn.textContent = 'Сохранить';
-    saveBtn.addEventListener('click', function () { saveDirection(item.id, card); });
-    actions.appendChild(saveBtn);
-
-    actions.appendChild(buildToggleButton(item.active, function () {
-        toggleDirectionActive(item.id, item.active !== false);
-    }));
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn danger small';
-    delBtn.textContent = 'Удалить';
-    delBtn.addEventListener('click', function () { deleteDirection(item.id); });
-    actions.appendChild(delBtn);
-
-    card.appendChild(actions);
-    return card;
-}
-
-function collectDirectionData(card) {
-    var technologies = [];
-    var rows = card.querySelectorAll('.directions__item-technologies .stats-row');
-    for (var i = 0; i < rows.length; i++) {
-        technologies.push({
-            name: rows[i].querySelector('.tech-name').value,
-            icon: rows[i].querySelector('.tech-icon').value
-        });
-    }
-    return {
-        title: card.querySelector('.directions__item-title').value,
-        description: card.querySelector('.directions__item-description').value,
-        technologies: technologies
-    };
-}
-
-function saveDirection(id, card) {
-    var data = collectDirectionData(card);
-    var item = findById(cachedDirections, id);
-    data.active = item ? item.active !== false : true;
-
-    if (data.title.trim() === '' || data.description.trim() === '') {
-        showStatus('Заполните название и описание направления', 'error');
-        return;
-    }
-    for (var i = 0; i < data.technologies.length; i++) {
-        if (data.technologies[i].name.trim() === '' || data.technologies[i].icon.trim() === '') {
-            showStatus('Заполните все поля технологий или удалите пустые строки', 'error');
-            return;
+            form.appendChild(buildField('Фото (путь)', 'team__item-image', item.photo));
+            form.appendChild(buildField('VK', '', item.vk, 'vk'));
+            return form;
+        },
+        collect: function (form) {
+            return {
+                name: form.querySelector('.team__item-title').value,
+                position: form.querySelector('.team__item-description').value,
+                photo: form.querySelector('.team__item-image').value,
+                vk: form.querySelector('[data-social="vk"]').value
+            };
+        },
+        validate: function (data) {
+            if (data.name.trim() === '' || data.position.trim() === '' || data.photo.trim() === '') {
+                return 'Заполните имя, должность и фото сотрудника';
+            }
+            return null;
+        },
+        defaults: function () {
+            return {
+                name: '',
+                position: cachedPositions.length > 0 ? cachedPositions[0].title : '',
+                photo: 'upload/placeholder-avatar.svg',
+                vk: '#'
+            };
+        },
+        toPayload: function (m) {
+            return { name: m.name, position: m.position, photo: m.photo, vk: m.vk };
         }
+    },
+
+    positions: {
+        api: '/api/positions',
+        hasActive: false,
+        narrow: true,
+        addTitle: 'Новая должность',
+        editTitle: 'Редактирование должности',
+        deleteConfirm: 'Удалить должность?',
+        searchFields: ['title'],
+        getCache: function () { return cachedPositions; },
+        columns: [
+            { label: 'Название', sortValue: function (p) { return p.title || ''; }, render: function (p) { return textCell(p.title); } },
+            {
+                label: 'Сотрудников',
+                sortValue: function (p) {
+                    return cachedTeam.filter(function (m) { return m.position === p.title; }).length;
+                },
+                render: function (p) {
+                    var count = cachedTeam.filter(function (m) { return m.position === p.title; }).length;
+                    return textCell(count);
+                }
+            }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Название должности', 'position-title', item.title));
+            return form;
+        },
+        collect: function (form) {
+            return { title: form.querySelector('.position-title').value };
+        },
+        validate: function (data) {
+            if (data.title.trim() === '') return 'Введите название должности';
+            return null;
+        },
+        defaults: function () { return { title: '' }; },
+        toPayload: function (p) { return { title: p.title }; }
+    },
+
+    timeline: {
+        api: '/api/timeline',
+        addTitle: 'Новый продукт таймлайна',
+        editTitle: 'Редактирование продукта',
+        deleteConfirm: 'Удалить карточку таймлайна?',
+        searchFields: ['name', 'category', 'subtitle', 'description', 'year'],
+        getCache: function () { return cachedTimeline; },
+        columns: [
+            { label: 'Метка', render: function (t) { return imgCell(t.mark || 'upload/marks/star.svg', t.name, true); } },
+            { label: 'Год', sortValue: function (t) { return t.year || 0; }, render: function (t) { return textCell(t.year); } },
+            { label: 'Название', sortValue: function (t) { return t.name || ''; }, render: function (t) { return textCell(t.name); } },
+            { label: 'Категория', sortValue: function (t) { return t.category || ''; }, render: function (t) { return textCell(t.category); } }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Год', 'timeline__item-year', item.year));
+            form.appendChild(buildField('Название продукта', 'timeline__item-name', item.name));
+            form.appendChild(buildSelectField('Тип метки (аудитория)', 'timeline__item-category', item.category, ['B2B', 'B2C', 'B2E']));
+            form.appendChild(buildSelectField('Метка (иконка из upload/marks)', 'timeline__item-mark', item.mark, TIMELINE_MARKS));
+            form.appendChild(buildField('Подзаголовок', 'timeline__item-subtitle', item.subtitle));
+            form.appendChild(buildTextareaField('Описание', 'timeline__item-description', item.description, 3));
+            return form;
+        },
+        collect: function (form) {
+            return {
+                year: Number(form.querySelector('.timeline__item-year').value),
+                name: form.querySelector('.timeline__item-name').value,
+                category: form.querySelector('.timeline__item-category').value,
+                mark: form.querySelector('.timeline__item-mark').value,
+                subtitle: form.querySelector('.timeline__item-subtitle').value,
+                description: form.querySelector('.timeline__item-description').value
+            };
+        },
+        validate: function (data) {
+            if (!Number.isInteger(data.year) || data.year < 1990 || data.year > 2100) {
+                return 'Год должен быть целым числом от 1990 до 2100';
+            }
+            if (data.name.trim() === '' || data.subtitle.trim() === '' || data.description.trim() === '') {
+                return 'Заполните название, подзаголовок и описание';
+            }
+            return null;
+        },
+        defaults: function () {
+            return { year: new Date().getFullYear(), name: '', category: 'B2B', mark: TIMELINE_MARKS[0], subtitle: '', description: '' };
+        },
+        toPayload: function (t) {
+            return { year: t.year, name: t.name, category: t.category, mark: t.mark, subtitle: t.subtitle, description: t.description };
+        }
+    },
+
+    brands: {
+        api: '/api/brands',
+        narrow: true,
+        addTitle: 'Новый логотип',
+        editTitle: 'Редактирование логотипа',
+        deleteConfirm: 'Удалить логотип?',
+        searchFields: ['name', 'src'],
+        getCache: function () { return cachedBrands; },
+        columns: [
+            { label: 'Логотип', render: function (b) { return imgCell(b.src, b.name, true); } },
+            { label: 'Название', sortValue: function (b) { return b.name || ''; }, render: function (b) { return textCell(b.name); } }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Путь к логотипу', 'brands__item-src', item.src));
+            form.appendChild(buildField('Название компании', 'brands__item-name', item.name));
+            return form;
+        },
+        collect: function (form) {
+            return {
+                src: form.querySelector('.brands__item-src').value,
+                name: form.querySelector('.brands__item-name').value
+            };
+        },
+        validate: function (data) {
+            if (data.src.trim() === '' || data.name.trim() === '') {
+                return 'Заполните путь к логотипу и название';
+            }
+            return null;
+        },
+        defaults: function () { return { src: '', name: '' }; },
+        toPayload: function (b) { return { src: b.src, name: b.name }; }
+    },
+
+    directions: {
+        api: '/api/directions',
+        addTitle: 'Новое направление',
+        editTitle: 'Редактирование направления',
+        deleteConfirm: 'Удалить направление?',
+        searchFields: ['title', 'description'],
+        getCache: function () { return cachedDirections; },
+        columns: [
+            { label: 'Название', sortValue: function (d) { return d.title || ''; }, render: function (d) { return textCell(d.title); } },
+            {
+                label: 'Технологий',
+                sortValue: function (d) { return (d.technologies || []).length; },
+                render: function (d) { return textCell((d.technologies || []).length); }
+            },
+            { label: 'Описание', render: function (d) { return truncCell(d.description); } }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Название направления', 'directions__item-title', item.title));
+            form.appendChild(buildTextareaField('Описание', 'directions__item-description', item.description, 3));
+
+            var techLabel = document.createElement('h4');
+            techLabel.className = 'subsection-title';
+            techLabel.textContent = 'Технологии';
+            form.appendChild(techLabel);
+
+            var techList = document.createElement('div');
+            techList.className = 'stats-list direction-technologies';
+            var technologies = item.technologies || [];
+            for (var i = 0; i < technologies.length; i++) {
+                techList.appendChild(buildTechnologyRow(technologies[i]));
+            }
+            form.appendChild(techList);
+
+            var addTechBtn = document.createElement('button');
+            addTechBtn.type = 'button';
+            addTechBtn.className = 'btn small';
+            addTechBtn.textContent = '+ Добавить технологию';
+            addTechBtn.addEventListener('click', function () {
+                var row = buildTechnologyRow({ name: '', icon: '' });
+                techList.appendChild(row);
+                row.querySelector('.tech-name').focus();
+            });
+            form.appendChild(addTechBtn);
+
+            return form;
+        },
+        collect: function (form) {
+            var technologies = [];
+            var rows = form.querySelectorAll('.direction-technologies .stats-row');
+            for (var i = 0; i < rows.length; i++) {
+                technologies.push({
+                    name: rows[i].querySelector('.tech-name').value,
+                    icon: rows[i].querySelector('.tech-icon').value
+                });
+            }
+            return {
+                title: form.querySelector('.directions__item-title').value,
+                description: form.querySelector('.directions__item-description').value,
+                technologies: technologies
+            };
+        },
+        validate: function (data) {
+            if (data.title.trim() === '' || data.description.trim() === '') {
+                return 'Заполните название и описание направления';
+            }
+            for (var i = 0; i < data.technologies.length; i++) {
+                if (data.technologies[i].name.trim() === '' || data.technologies[i].icon.trim() === '') {
+                    return 'Заполните все поля технологий или удалите пустые строки';
+                }
+            }
+            return null;
+        },
+        defaults: function () { return { title: '', description: '', technologies: [] }; },
+        toPayload: function (d) {
+            return { title: d.title, description: d.description, technologies: d.technologies };
+        }
+    },
+
+    vacancies: {
+        api: '/api/vacancies',
+        addTitle: 'Новая вакансия',
+        editTitle: 'Редактирование вакансии',
+        deleteConfirm: 'Удалить вакансию?',
+        searchFields: ['title', 'format', 'url'],
+        getCache: function () { return cachedVacancies; },
+        columns: [
+            { label: 'Название', sortValue: function (v) { return v.title || ''; }, render: function (v) { return textCell(v.title); } },
+            { label: 'Формат', sortValue: function (v) { return v.format || ''; }, render: function (v) { return textCell(v.format); } },
+            { label: 'Ссылка', sortValue: function (v) { return v.url || ''; }, render: function (v) { return linkCell(v.url); } }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Название', 'vacancies__item-title', item.title));
+            form.appendChild(buildField('Формат / город', 'vacancies__item-address', item.format));
+            form.appendChild(buildField('Ссылка на hh.ru', 'vacancies__item-lik', item.url));
+            return form;
+        },
+        collect: function (form) {
+            return {
+                title: form.querySelector('.vacancies__item-title').value,
+                format: form.querySelector('.vacancies__item-address').value,
+                url: form.querySelector('.vacancies__item-lik').value
+            };
+        },
+        validate: function (data) {
+            if (data.title.trim() === '' || data.format.trim() === '' || data.url.trim() === '') {
+                return 'Заполните все поля вакансии';
+            }
+            return null;
+        },
+        defaults: function () {
+            return { title: '', format: 'удаленно', url: 'https://hh.ru' };
+        },
+        toPayload: function (v) {
+            return { title: v.title, format: v.format, url: v.url };
+        }
+    },
+
+    gallery: {
+        api: '/api/gallery',
+        addTitle: 'Новое фото',
+        editTitle: 'Редактирование фото',
+        deleteConfirm: 'Удалить фото?',
+        searchFields: ['caption', 'type', 'src'],
+        getCache: function () { return cachedGallery; },
+        columns: [
+            {
+                label: 'Превью',
+                render: function (g) {
+                    if (g.type === 'video') {
+                        var v = document.createElement('span');
+                        v.className = 'table-video-mark';
+                        v.textContent = '🎬';
+                        v.title = g.src;
+                        return v;
+                    }
+                    return imgCell(g.src, g.caption);
+                }
+            },
+            { label: 'Тип', sortValue: function (g) { return g.type || ''; }, render: function (g) { return textCell(g.type === 'video' ? 'видео' : 'фото'); } },
+            { label: 'Подпись', sortValue: function (g) { return g.caption || ''; }, render: function (g) { return truncCell(g.caption); } }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Путь к файлу', 'gallery__item-src', item.src));
+            form.appendChild(buildSelectField('Тип файла', 'gallery__item-type', item.type, ['image', 'video']));
+            form.appendChild(buildField('Подпись к фото', 'gallery__item-caption', item.caption));
+            return form;
+        },
+        collect: function (form) {
+            return {
+                src: form.querySelector('.gallery__item-src').value,
+                type: form.querySelector('.gallery__item-type').value,
+                caption: form.querySelector('.gallery__item-caption').value
+            };
+        },
+        validate: function (data) {
+            if (data.src.trim() === '' || data.caption.trim() === '') {
+                return 'Заполните путь к файлу и подпись';
+            }
+            return null;
+        },
+        defaults: function () { return { src: '', type: 'image', caption: '' }; },
+        toPayload: function (g) { return { src: g.src, type: g.type, caption: g.caption }; }
+    },
+
+    work: {
+        api: '/api/work',
+        addTitle: 'Новое фото офиса',
+        editTitle: 'Редактирование фото офиса',
+        deleteConfirm: 'Удалить фото офиса?',
+        searchFields: ['caption', 'image'],
+        getCache: function () { return cachedWork; },
+        columns: [
+            { label: 'Фото', render: function (w) { return imgCell(w.image, w.caption); } },
+            { label: 'Подпись', sortValue: function (w) { return w.caption || ''; }, render: function (w) { return truncCell(w.caption); } }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Путь к фото', 'work__item-image', item.image));
+            form.appendChild(buildTextareaField('Подпись', 'work__item-caption', item.caption, 2));
+            return form;
+        },
+        collect: function (form) {
+            return {
+                image: form.querySelector('.work__item-image').value,
+                caption: form.querySelector('.work__item-caption').value
+            };
+        },
+        validate: function (data) {
+            if (data.image.trim() === '' || data.caption.trim() === '') {
+                return 'Заполните путь к фото и подпись';
+            }
+            return null;
+        },
+        defaults: function () { return { image: '', caption: '' }; },
+        toPayload: function (w) { return { image: w.image, caption: w.caption }; }
+    },
+
+    benefits: {
+        api: '/api/benefits',
+        addTitle: 'Новый бонус',
+        editTitle: 'Редактирование бонуса',
+        deleteConfirm: 'Удалить бонус?',
+        searchFields: ['title', 'description'],
+        getCache: function () { return cachedBenefits; },
+        columns: [
+            { label: 'Название', sortValue: function (b) { return b.title || ''; }, render: function (b) { return textCell(b.title); } },
+            { label: 'Описание', sortValue: function (b) { return b.description || ''; }, render: function (b) { return truncCell(b.description); } }
+        ],
+        buildForm: function (item) {
+            var form = document.createElement('div');
+            form.appendChild(buildField('Название', 'bonus__item-title', item.title));
+            form.appendChild(buildTextareaField('Описание', 'bonus__item-text', item.description, 3));
+            return form;
+        },
+        collect: function (form) {
+            return {
+                title: form.querySelector('.bonus__item-title').value,
+                description: form.querySelector('.bonus__item-text').value
+            };
+        },
+        validate: function (data) {
+            if (data.title.trim() === '' || data.description.trim() === '') {
+                return 'Заполните название и описание бонуса';
+            }
+            return null;
+        },
+        defaults: function () { return { title: '', description: '' }; },
+        toPayload: function (b) { return { title: b.title, description: b.description }; }
     }
+};
 
-    apiRequest('PUT', '/api/directions/' + id, data)
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Направление сохранено');
-            isDirty = false;
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка сохранения: ' + error.message, 'error');
-        });
-}
+// ─── Массовое удаление галереи ──────────────────────────────
+// Последовательные DELETE-запросы (не параллельно, чтобы не было
+// гонки записи в один и тот же data.json). Отмена возвращает все
+// фото обратно (id будут новые).
 
-function toggleDirectionActive(id, currentlyActive) {
-    var item = findById(cachedDirections, id);
-    if (!item) return;
-
-    apiRequest('PUT', '/api/directions/' + id, {
-        title: item.title,
-        description: item.description,
-        technologies: item.technologies,
-        active: !currentlyActive
-    })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus(currentlyActive ? 'Направление деактивировано' : 'Направление активировано');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка: ' + error.message, 'error');
-        });
-}
-
-function addDirection() {
-    apiRequest('POST', '/api/directions', {
-        title: 'Новое направление',
-        description: 'Описание направления',
-        technologies: [],
-        active: true
-    })
-        .then(parseApiResponse)
-        .then(function () {
-            showStatus('Направление добавлено');
-            loadData();
-        })
-        .catch(function (error) {
-            showStatus('Ошибка добавления: ' + error.message, 'error');
-        });
-}
-
-function deleteDirection(id) {
-    if (!confirm('Удалить направление?')) {
+function deleteAllGalleryItems() {
+    if (cachedGallery.length === 0) {
+        showStatus('Галерея уже пуста');
+        return;
+    }
+    if (!confirm('Удалить все фото галереи (' + cachedGallery.length + ' шт.)? Вернуть можно будет кнопкой «Отменить».')) {
         return;
     }
 
-    apiRequest('DELETE', '/api/directions/' + id)
-        .then(parseApiResponse)
+    var snapshot = cachedGallery.map(function (g) {
+        return { src: g.src, type: g.type, caption: g.caption, active: g.active !== false };
+    });
+    var ids = cachedGallery.map(function (item) { return item.id; });
+
+    var chain = Promise.resolve();
+    ids.forEach(function (id) {
+        chain = chain.then(function () {
+            return apiRequest('DELETE', '/api/gallery/' + id).then(parseApiResponse);
+        });
+    });
+
+    chain
         .then(function () {
-            showStatus('Направление удалено');
+            pushUndo('gallery', 'удаление всей галереи', function () {
+                var restore = Promise.resolve();
+                snapshot.forEach(function (itemData) {
+                    restore = restore.then(function () {
+                        return apiRequest('POST', '/api/gallery', itemData).then(parseApiResponse);
+                    });
+                });
+                return restore;
+            });
+            showStatus('Вся галерея удалена');
             loadData();
         })
         .catch(function (error) {
-            showStatus('Ошибка удаления: ' + error.message, 'error');
+            showStatus('Ошибка при массовом удалении: ' + error.message, 'error');
+            loadData();
         });
 }
 
-// ─── Контактная форма «Напиши нам» (блок 10) ────────────────
-// Контракт сервера (dataService.js: validateContactForm): title,
-// description, directions: [строки]. Это singleton-объект (не список),
-// поэтому раздел оформлен как форма, а не как карточки — по образцу Hero.
-// Только PUT /api/contact-form, добавления/удаления карточек нет.
+// ─── Контактная форма (singleton, редактируется на месте) ───
 
 function renderContactForm(form) {
     document.querySelector('#contact-form-title').value = form.title || '';
@@ -1923,11 +1427,17 @@ function saveContactForm() {
         }
     }
 
+    var previous = cachedContactForm;
+
     apiRequest('PUT', '/api/contact-form', data)
         .then(parseApiResponse)
         .then(function () {
+            pushUndo('contact-form', 'изменение контактной формы', function () {
+                return apiRequest('PUT', '/api/contact-form', previous).then(parseApiResponse);
+            });
             showStatus('Контактная форма сохранена');
             isDirty = false;
+            loadData();
         })
         .catch(function (error) {
             showStatus('Ошибка сохранения: ' + error.message, 'error');
@@ -1943,11 +1453,9 @@ function addContactFormDirection() {
 
 // ─── Утилиты ────────────────────────────────────────────────
 
-// Пути к фото сотрудников в data.json относительные ("upload/...") и
-// рассчитаны на публичную страницу, открытую с корня сайта. Админка
-// открыта на /admin/, поэтому такой относительный путь резолвится
-// браузером неверно (/admin/upload/...) — добавляем ведущий слэш,
-// чтобы путь всегда резолвился от корня сайта.
+// Пути к фото в data.json относительные ("upload/...") и рассчитаны
+// на публичную страницу, открытую с корня сайта. Админка открыта на
+// /admin/, поэтому добавляем ведущий слэш, чтобы путь резолвился от корня.
 function resolveSitePath(src) {
     if (!src) return src;
     if (/^(https?:)?\/\//.test(src) || src.indexOf('/') === 0) {
@@ -1963,50 +1471,52 @@ function findById(arr, id) {
     return null;
 }
 
-// ─── Привязка статических кнопок ────────────────────────────
+// ─── Привязка кнопок и запуск ───────────────────────────────
 
 function wireStaticButtons() {
     document.querySelector('#hero-add-stat').addEventListener('click', addStat);
     document.querySelector('#hero-save').addEventListener('click', saveHero);
-    document.querySelector('#team-add').addEventListener('click', addTeamMember);
-    document.querySelector('#vacancies-add').addEventListener('click', addVacancy);
-    document.querySelector('#benefits-add').addEventListener('click', addBenefit);
-    document.querySelector('#positions-add').addEventListener('click', addPosition);
-    document.querySelector('#timeline-add').addEventListener('click', addTimelineItem);
-    document.querySelector('#gallery-add').addEventListener('click', addGalleryItem);
+
+    for (var name in blockConfigs) {
+        wireAddButton(name);
+    }
+
     document.querySelector('#gallery-delete-all').addEventListener('click', deleteAllGalleryItems);
-    document.querySelector('#brands-add').addEventListener('click', addBrand);
-    document.querySelector('#work-add').addEventListener('click', addWorkItem);
-    document.querySelector('#directions-add').addEventListener('click', addDirection);
+
     document.querySelector('#contact-form-add-direction').addEventListener('click', addContactFormDirection);
     document.querySelector('#contact-form-save').addEventListener('click', saveContactForm);
 }
 
-function wireViewToggle() {
-    document.querySelector('#view-cards').addEventListener('click', function () {
-        setTeamViewMode('cards');
-        renderTeam(cachedTeam);
-    });
-    document.querySelector('#view-table').addEventListener('click', function () {
-        setTeamViewMode('table');
-        renderTeam(cachedTeam);
-    });
+function wireAddButton(name) {
+    var btn = document.querySelector('#' + name + '-add');
+    if (btn) {
+        btn.addEventListener('click', function () {
+            openBlockEditModal(name, null);
+        });
+    }
 }
 
 function wireSearch() {
-    document.querySelector('#team-search').addEventListener('input', function () {
-        renderTeam(cachedTeam);
-    });
-    document.querySelector('#vacancies-search').addEventListener('input', function () {
-        renderVacancies(cachedVacancies);
-    });
+    for (var name in blockConfigs) {
+        wireSearchInput(name);
+    }
+}
+
+function wireSearchInput(name) {
+    var input = document.querySelector('#' + name + '-search');
+    if (input) {
+        input.addEventListener('input', function () {
+            renderBlock(name);
+        });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
     wireStaticButtons();
     wireSidebar();
     wireDirtyTracking();
-    wireViewToggle();
     wireSearch();
+    wireUndo();
+    wireModal();
     loadData();
 });
