@@ -3239,7 +3239,8 @@ ul {
 
 @media (min-width:1326px) {
     .icon-block__description {
-        opacity: 0
+        opacity: 0;
+        pointer-events: none
     }
 }
 
@@ -5533,6 +5534,46 @@ div[id^=leadia],
 jdiv:first-of-type,
 tworoomz-widget:first-of-type {
     z-index: 9 !important
+}
+
+.work__container--type-card {
+    position: relative
+}
+
+.work__container--type-card .card {
+    overflow: hidden
+}
+
+.work__container--type-card .work__card-text {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    left: 24px;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    padding: 18px 20px;
+    color: #fff;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, .55);
+    background: linear-gradient(135deg, rgba(18, 32, 59, .82), rgba(18, 32, 59, .36));
+    border-radius: 18px;
+    backdrop-filter: blur(6px)
+}
+
+.work__container--type-card .work__card-text-line {
+    flex: 0 0 auto;
+    background-color: #fff
+}
+
+@media (max-width:767px) {
+    .work__container--type-card .work__card-text {
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 12px
+    }
 }
 
 /*# sourceMappingURL=style.min.css.map */
